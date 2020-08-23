@@ -27,7 +27,6 @@ public class Render implements IRenderer {
 		return INSTANCE;
 	}
 
-	@BooleanFlag public Boolean Rendering = false;
 	/**
 	 * Called after vanilla world rendering
 	 *
@@ -53,7 +52,7 @@ public class Render implements IRenderer {
 		);
 		RenderSystem.disableTexture();
 		RenderSystem.depthMask(false);
-		RenderSystem.disableLighting();
+//		RenderSystem.disableLighting();
 
 		buffer.begin(GL11.GL_QUADS, VertexFormats.POSITION_COLOR);
 

@@ -22,11 +22,10 @@ import java.net.Proxy;
 
 @Mixin(MinecraftServer.class)
 public class Server implements MeterI {
-	public MeterManager meterManager;
+	public final MeterManager meterManager = new MeterManager();
 
 	@Inject(method = "<init>", at = @At("RETURN"))
 	public void Init (Thread thread, DynamicRegistryManager.Impl impl, LevelStorage.Session session, SaveProperties saveProperties, ResourcePackManager resourcePackManager, Proxy proxy, DataFixer dataFixer, ServerResourceManager serverResourceManager, MinecraftSessionService minecraftSessionService, GameProfileRepository gameProfileRepository, UserCache userCache, WorldGenerationProgressListenerFactory worldGenerationProgressListenerFactory, CallbackInfo ci) {
-		meterManager = new MeterManager();
 	}
 
 	@Override

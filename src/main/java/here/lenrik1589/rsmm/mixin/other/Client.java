@@ -13,11 +13,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MinecraftClient.class)
 public class Client implements MeterI {
 
-	public MeterManager meterManager;
+	public final MeterManager meterManager = new MeterManager();
 
-	@Inject(method = "<init>", at = @At("HEAD"), require = 10)
+	@Inject(method = "<init>(Lnet/minecraft/client/RunArgs;)V", at = @At("RETURN"))
 	public void Init (RunArgs args, CallbackInfo ci) {
-		meterManager = new MeterManager();
 		Names.LOGGER.info("fail did it do really?");
 	}
 
