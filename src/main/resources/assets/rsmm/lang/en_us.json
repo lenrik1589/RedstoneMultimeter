@@ -1,0 +1,10 @@
+{
+	"rsmm.key.category": "Redstone Multimeter",
+	"key.rsmm.meter.toggle": "Toggle Meter",
+	"rsmm.gui.title.configs": "Redstone Multimeter Settings",
+	"rsmm.gui.additional": "Additional",
+	"rsmm.gui.generic": "Generic",
+	"rsmm.error.malformed_color": "Malformed color.",
+	"rsmm.error.too_big_value": "Values must not be more than 255, %d found for %s.",
+	"rsmm.error.meter_exists": "Meter with id %s already exists."
+}

@@ -1,0 +1,27 @@
+{
+	"compatibilityLevel": "JAVA_14",
+	"package": "here.lenrik1589.rsmm.mixin",
+	"mixins": [
+		"block.AbstractButtonBlockMixin",
+		"block.AbstractPressurePlateBlockMixin",
+		"block.AirBlockMixin",
+		"block.BlockMixin",
+		"block.ComparatorBlockMixin",
+		"block.DetectorRailBlockMixin",
+		"block.DispenserBlockMixin",
+		"block.LeverBlockMixin",
+		"block.ObserverBlockMixin",
+		"block.PistonBlockMixin",
+		"block.PoweredRailBlockMixin",
+		"block.RedstoneTorchBlockMixin",
+		"block.RedstoneWireBlockMixin",
+		"block.RepeaterBlockMixin",
+		"block.TripwireHookBlockMixin"
+	],
+	"client": [
+		"other.Client"
+	],
+	"server": [
+		"other.Server"
+	]
+}

@@ -1,0 +1,18 @@
+{
+	"schemaVersion": 1,
+	"id": "rsmm",
+	"version": "${version}",
+	"name": "Redstone Multimeter",
+	"environment": "*",
+	"depends": {
+		"malilib": "0.10.0-dev.21+arne"
+	},
+	"entrypoints": {
+		"main": [
+			"here.lenrik1589.rsmm.RsmmInitializer"
+		],
+		"modmenu": [
+			"here.lenrik1589.rsmm.ModMenuImpl"
+		]
+	}
+}
