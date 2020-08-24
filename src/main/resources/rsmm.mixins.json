@@ -16,7 +16,9 @@
 		"block.RedstoneTorchBlockMixin",
 		"block.RedstoneWireBlockMixin",
 		"block.RepeaterBlockMixin",
-		"block.TripwireHookBlockMixin"
+		"block.TripwireHookBlockMixin",
+		"other.Dedicated",
+		"other.Integrated"
 	],
 	"client": [
 		"other.Client"

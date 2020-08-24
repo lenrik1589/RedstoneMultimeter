@@ -4,9 +4,13 @@ import com.google.common.collect.Iterators;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import here.lenrik1589.rsmm.Names;
+import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.network.ServerSidePacketRegistry;
 import net.minecraft.command.argument.BlockPosArgumentType;
 import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.command.argument.TextArgumentType;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.LiteralText;
@@ -49,8 +53,6 @@ public class Command {
 			return Color.values()[random.nextInt(Color.values().length)];
 		}
 	}
-
-	//@
 
 	public static void register (CommandDispatcher<ServerCommandSource> dispatcher, boolean ignored) {
 		dispatcher.register(
@@ -285,17 +287,42 @@ public class Command {
 	}
 
 	public static int addMeter (ServerCommandSource source, BlockPos pos) throws CommandSyntaxException {
-		MeterManager.get(source.getMinecraftServer()).addMeter(new Meter(pos, source.getWorld().getRegistryKey(), MeterManager.get(source.getMinecraftServer()).getNextId()).setColor(Color.getNextColor().color));
-		return 0;
+		return addMeter(source, MeterManager.get(source.getMinecraftServer()).getNextId(), pos);
 	}
 
 	public static int addMeter (ServerCommandSource source, Identifier id, BlockPos pos) throws CommandSyntaxException {
-		MeterManager.get(source.getMinecraftServer()).addMeter(new Meter(pos, source.getWorld().getRegistryKey(), id).setColor(Color.getNextColor().color));
+		Meter meter = new Meter(
+						pos,
+						source.getWorld().getRegistryKey(),
+						id
+		).setColor(Color.getNextColor().color);
+		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeEnumConstant(MeterManager.Action.add);
+		writeMeter(buffer, meter);
+		PacketByteBuf bufferWithExpectedLength = new PacketByteBuf(Unpooled.buffer());
+		bufferWithExpectedLength.writeInt(buffer.array().length);
+		bufferWithExpectedLength.writeBytes(buffer);
+		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, bufferWithExpectedLength)
+		);
+		MeterManager.get(source.getMinecraftServer()).addMeter(meter);
 		return 0;
 	}
 
 	public static int addMeter (ServerCommandSource source, Identifier id, BlockPos pos, Text name) throws CommandSyntaxException {
-		MeterManager.get(source.getMinecraftServer()).addMeter(new Meter(pos, source.getWorld().getRegistryKey(), id, name).setColor(Color.getNextColor().color));
+		Meter meter = new Meter(
+						pos,
+						source.getWorld().getRegistryKey(),
+						id,
+						name
+		).setColor(Color.getNextColor().color);
+		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeEnumConstant(MeterManager.Action.add);
+		writeMeter(buffer, meter);
+		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+		);
+		MeterManager.get(source.getMinecraftServer()).addMeter(meter);
 		return 0;
 	}
 
@@ -304,4 +331,15 @@ public class Command {
 		return 0;
 	}
 
+	private static int getExpectedAddPacketSize (Meter meter) {
+		return meter.id.toString().length() + meter.dimension.getValue().toString().length() + 4 * 4;
+	}
+
+	private static void writeMeter (PacketByteBuf buffer, Meter meter) {
+		buffer.writeIdentifier(meter.id);
+		buffer.writeBlockPos(meter.position);
+		buffer.writeIdentifier(meter.dimension.getValue());
+		buffer.writeInt(meter.color);
+		buffer.writeText(meter.name);
+	}
 }

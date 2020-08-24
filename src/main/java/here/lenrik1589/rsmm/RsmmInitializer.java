@@ -10,21 +10,55 @@ import fi.dy.masa.malilib.hotkeys.IHotkeyCallback;
 import fi.dy.masa.malilib.hotkeys.IKeybind;
 import fi.dy.masa.malilib.hotkeys.KeyAction;
 import fi.dy.masa.malilib.interfaces.IInitializationHandler;
-import fi.dy.masa.malilib.interfaces.IRenderer;
 import here.lenrik1589.rsmm.config.ConfigHandler;
-import here.lenrik1589.rsmm.meter.*;
+import here.lenrik1589.rsmm.config.RsmmConfigGui;
+import here.lenrik1589.rsmm.meter.Command;
+import here.lenrik1589.rsmm.meter.Meter;
+import here.lenrik1589.rsmm.meter.MeterManager;
+import here.lenrik1589.rsmm.meter.Render;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.network.ClientSidePacketRegistry;
+import net.fabricmc.fabric.api.network.PacketContext;
+import net.fabricmc.fabric.api.network.ServerSidePacketRegistry;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
+
+import java.util.Arrays;
 
 public class RsmmInitializer implements ModInitializer {
+
+	MeterPacketHandler MPH = new MeterPacketHandler();
+	EventPacketHandler EPH = new EventPacketHandler();
 
 	@Override
 	public void onInitialize () {
 		CommandRegistrationCallback.EVENT.register(Command::register);
 		InitializationHandler.getInstance().registerInitializationHandler(new Initializer());
+		ClientSidePacketRegistry.INSTANCE.register(
+						Names.METER_CHANNEL,
+						MPH::onPacketReceived
+		);
+		ServerSidePacketRegistry.INSTANCE.register(
+						Names.METER_CHANNEL,
+						MPH::onPacketReceived
+		);
+		ClientSidePacketRegistry.INSTANCE.register(
+						Names.EVENT_CHANNEL,
+						EPH::onPacketReceived
+		);
+		ServerSidePacketRegistry.INSTANCE.register(
+						Names.EVENT_CHANNEL,
+						EPH::onPacketReceived
+		);
 	}
 
 	private static class Initializer implements IInitializationHandler {
@@ -74,6 +108,32 @@ public class RsmmInitializer implements ModInitializer {
 				return true;
 			}
 
+		}
+
+	}
+
+	private static class MeterPacketHandler {
+		public void onPacketReceived (PacketContext context, PacketByteBuf buf) {
+			Names.LOGGER.info(Arrays.toString(buf.array()));
+			MeterManager.Action action = buf.readEnumConstant(MeterManager.Action.class);
+			Meter meter = readMeter(buf);
+			Names.LOGGER.info("Received packet for %s, with action %s", meter, action);
+		}
+
+		private static Meter readMeter (PacketByteBuf buffer) {
+			Identifier id = buffer.readIdentifier();
+			BlockPos position = buffer.readBlockPos();
+			Identifier dimId = buffer.readIdentifier();
+			RegistryKey<World> dimention = RegistryKey.of(Registry.DIMENSION, dimId);
+			int color = buffer.readInt();
+			Text name = buffer.readText();
+			return new Meter(position, dimention, id, name).setColor(color);
+		}
+
+	}
+
+	private static class EventPacketHandler {
+		public void onPacketReceived (PacketContext context, PacketByteBuf buf) {
 		}
 
 	}

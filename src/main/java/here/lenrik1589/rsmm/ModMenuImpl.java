@@ -1,5 +1,6 @@
 package here.lenrik1589.rsmm;
 
+import here.lenrik1589.rsmm.config.RsmmConfigGui;
 import io.github.prospector.modmenu.api.ConfigScreenFactory;
 import io.github.prospector.modmenu.api.ModMenuApi;
 

@@ -6,8 +6,12 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.dedicated.DedicatedServer;
+import net.minecraft.server.dedicated.MinecraftDedicatedServer;
+import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
+import org.apache.commons.lang3.reflect.TypeUtils;
 
 import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
@@ -17,6 +21,12 @@ public class MeterManager {
 	public final LinkedHashMap<Identifier, Meter> METERS = new LinkedHashMap<>();
 	private static final DynamicCommandExceptionType METER_EXISTS = new DynamicCommandExceptionType(a -> new TranslatableText("rsmm.error.meter_exists", a));
 
+	public enum Action {
+		add,
+		remove,
+		name,
+		color;
+	}
 
 	public Identifier getNextId () {
 		if (METERS.isEmpty()) {
@@ -57,19 +67,20 @@ public class MeterManager {
 	}
 
 	public static int clear (CommandContext<ServerCommandSource> context) {
-		((MeterI)context.getSource().getMinecraftServer()).getMeterManager().clear();
+		((MeterI) context.getSource().getMinecraftServer()).getMeterManager().clear();
 		return 0;
 	}
 
-	public void clear(){
+	public void clear () {
 		METERS.clear();
 	}
 
-	public static MeterManager get(MinecraftServer server){
-		return ((MeterI) server).getMeterManager();
+	public static MeterManager get (Object server) {
+		MinecraftServer actualServer = (MinecraftServer) server;
+		return ((MeterI) actualServer).getMeterManager();
 	}
 
-	public static MeterManager get(MinecraftClient client){
+	public static MeterManager get (MinecraftClient client) {
 		return ((MeterI) client).getMeterManager();
 	}
 
