@@ -8,14 +8,29 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
 
+import java.rmi.NoSuchObjectException;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MeterManager {
 	public final LinkedHashMap<Identifier, Meter> METERS = new LinkedHashMap<>();
 	private static final DynamicCommandExceptionType METER_EXISTS = new DynamicCommandExceptionType(a -> new TranslatableText("rsmm.error.meter_exists", a));
+
+	public Identifier getMeterId (BlockPos pos, RegistryKey<World> dimension) throws NoSuchObjectException {
+		for (Map.Entry<Identifier, Meter> entry : METERS.entrySet()) {
+			Meter m = entry.getValue();
+			if (m.dimension == dimension && m.position.equals(pos)) {
+				return m.id;
+			}
+		}
+		throw new NoSuchObjectException("maybe add it first?");
+	}
 
 	public enum Action {
 		add,
