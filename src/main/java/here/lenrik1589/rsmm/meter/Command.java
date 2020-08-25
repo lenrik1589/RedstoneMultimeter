@@ -277,11 +277,22 @@ public class Command {
 	}
 
 	private static int removeMeter (ServerCommandSource source, Identifier id) {
+		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeIdentifier(id);
 		MeterManager.get(source.getMinecraftServer()).METERS.remove(id);
+		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+		);
 		return 0;
 	}
 
 	private static int setMeterName (ServerCommandSource source, Identifier id, Text name) {
+		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeIdentifier(id);
+		buffer.writeText(name);
+		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+		);
 		MeterManager.get(source.getMinecraftServer()).METERS.get(id).name = name;
 		return 0;
 	}
@@ -324,6 +335,9 @@ public class Command {
 	}
 
 	private static int setColor (ServerCommandSource source, Meter meter, Integer color) {
+		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeIdentifier(meter.id);
+		buffer.writeInt(color);
 		meter.color = color;
 		return 0;
 	}

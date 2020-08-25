@@ -114,20 +114,35 @@ public class RsmmInitializer implements ModInitializer {
 
 	private static class MeterPacketHandler {
 		public void onPacketReceived (PacketContext context, PacketByteBuf buf) {
-			Names.LOGGER.info(Arrays.toString(buf.array()));
 			MeterManager.Action action = buf.readEnumConstant(MeterManager.Action.class);
-			Meter meter = readMeter(buf);
-			Names.LOGGER.info("Received packet for %s, with action %s", meter, action);
+			Meter meter;
+			switch (action) {
+				case add -> {
+					meter = readMeter(buf);
+					MeterManager.get(MinecraftClient.getInstance()).METERS.put(meter.id, meter);
+				}
+				case name -> {
+					meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier());
+					meter.name = buf.readText();
+				}
+				case color -> {
+					meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier());
+					meter.color = buf.readInt();
+				}
+				case remove -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.remove(buf.readIdentifier());
+				default -> throw new IllegalStateException("Unexpected value: " + action);
+			}
+			Names.LOGGER.info("Received packet for {}, with action {}", meter.id, action);
 		}
 
 		private static Meter readMeter (PacketByteBuf buffer) {
 			Identifier id = buffer.readIdentifier();
 			BlockPos position = buffer.readBlockPos();
 			Identifier dimId = buffer.readIdentifier();
-			RegistryKey<World> dimention = RegistryKey.of(Registry.DIMENSION, dimId);
+			RegistryKey<World> dimension = RegistryKey.of(Registry.DIMENSION, dimId);
 			int color = buffer.readInt();
 			Text name = buffer.readText();
-			return new Meter(position, dimention, id, name).setColor(color);
+			return new Meter(position, dimension, id, name).setColor(color);
 		}
 
 	}
