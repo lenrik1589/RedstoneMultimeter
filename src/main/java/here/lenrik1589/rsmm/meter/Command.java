@@ -299,11 +299,8 @@ public class Command {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
 		buffer.writeEnumConstant(MeterManager.Action.add);
 		writeMeter(buffer, meter);
-		PacketByteBuf bufferWithExpectedLength = new PacketByteBuf(Unpooled.buffer());
-		bufferWithExpectedLength.writeInt(buffer.array().length);
-		bufferWithExpectedLength.writeBytes(buffer);
 		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
-						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, bufferWithExpectedLength)
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
 		);
 		MeterManager.get(source.getMinecraftServer()).addMeter(meter);
 		return 0;
