@@ -43,4 +43,9 @@ public class Meter {
 		return this;
 	}
 
+	public Meter setName (Text name) {
+		this.name = name;
+		return this;
+	}
+
 }

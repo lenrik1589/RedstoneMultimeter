@@ -6,12 +6,8 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.dedicated.DedicatedServer;
-import net.minecraft.server.dedicated.MinecraftDedicatedServer;
-import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
-import org.apache.commons.lang3.reflect.TypeUtils;
 
 import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
@@ -25,7 +21,8 @@ public class MeterManager {
 		add,
 		remove,
 		name,
-		color;
+		color,
+		clear
 	}
 
 	public Identifier getNextId () {

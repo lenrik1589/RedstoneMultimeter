@@ -32,7 +32,7 @@ import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 
 public class RsmmInitializer implements ModInitializer {
 
@@ -113,26 +113,33 @@ public class RsmmInitializer implements ModInitializer {
 	}
 
 	private static class MeterPacketHandler {
+		private static final Meter clearMeter = new Meter(
+						new BlockPos(-2147483648,-2147483648,-2147483648),
+						null,
+						new Identifier("remove", "all")
+		);
+
 		public void onPacketReceived (PacketContext context, PacketByteBuf buf) {
 			MeterManager.Action action = buf.readEnumConstant(MeterManager.Action.class);
-			Meter meter;
+			final Meter meter;
 			switch (action) {
-				case add -> {
-					meter = readMeter(buf);
-					MeterManager.get(MinecraftClient.getInstance()).METERS.put(meter.id, meter);
-				}
-				case name -> {
-					meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier());
-					meter.name = buf.readText();
-				}
-				case color -> {
-					meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier());
-					meter.color = buf.readInt();
-				}
-				case remove -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.remove(buf.readIdentifier());
+				case add -> meter = readMeter(buf);
+				case name -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier()).setName(buf.readText());
+				case color -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier()).setColor(buf.readInt());
+				case remove -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buf.readIdentifier());
+				case clear -> meter = clearMeter;
 				default -> throw new IllegalStateException("Unexpected value: " + action);
 			}
-			Names.LOGGER.info("Received packet for {}, with action {}", meter.id, action);
+			context.getTaskQueue().execute(
+							() -> {
+								switch (action) {
+									case add -> MeterManager.get(MinecraftClient.getInstance()).METERS.put(meter.id, meter);
+									case remove -> MeterManager.get(MinecraftClient.getInstance()).METERS.remove(meter.id);
+									case clear -> MeterManager.get(MinecraftClient.getInstance()).METERS.clear();
+								}
+								Names.LOGGER.info("Received packet for {}, with action {}", meter.id, action);
+							}
+			);
 		}
 
 		private static Meter readMeter (PacketByteBuf buffer) {
@@ -149,6 +156,11 @@ public class RsmmInitializer implements ModInitializer {
 
 	private static class EventPacketHandler {
 		public void onPacketReceived (PacketContext context, PacketByteBuf buf) {
+			context.getTaskQueue().execute(
+							() -> {
+
+							}
+			);
 		}
 
 	}

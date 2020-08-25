@@ -3,6 +3,7 @@ package here.lenrik1589.rsmm.meter;
 import com.google.common.collect.Iterators;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import here.lenrik1589.rsmm.Names;
 import io.netty.buffer.Unpooled;
@@ -125,7 +126,7 @@ public class Command {
 																										),
 																										TextArgumentType.getTextArgument(
 																														context,
-																														"id"
+																														"name"
 																										)
 																						)
 																		)
@@ -151,7 +152,7 @@ public class Command {
 														literal(
 																		"all"
 														).executes(
-																		MeterManager::clear
+																		Command::clear
 														)
 										).then(
 														argument(
@@ -278,6 +279,7 @@ public class Command {
 
 	private static int removeMeter (ServerCommandSource source, Identifier id) {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeEnumConstant(MeterManager.Action.remove);
 		buffer.writeIdentifier(id);
 		MeterManager.get(source.getMinecraftServer()).METERS.remove(id);
 		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
@@ -286,8 +288,21 @@ public class Command {
 		return 0;
 	}
 
+	private static int clear (CommandContext<ServerCommandSource> context) {
+		ServerCommandSource source = context.getSource();
+		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeEnumConstant(MeterManager.Action.clear);
+		MeterManager.get(source.getMinecraftServer()).METERS.clear();
+		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+		);
+		return 0;
+	}
+
+
 	private static int setMeterName (ServerCommandSource source, Identifier id, Text name) {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeEnumConstant(MeterManager.Action.name);
 		buffer.writeIdentifier(id);
 		buffer.writeText(name);
 		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
@@ -336,14 +351,14 @@ public class Command {
 
 	private static int setColor (ServerCommandSource source, Meter meter, Integer color) {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+		buffer.writeEnumConstant(MeterManager.Action.color);
 		buffer.writeIdentifier(meter.id);
 		buffer.writeInt(color);
+		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+		);
 		meter.color = color;
 		return 0;
-	}
-
-	private static int getExpectedAddPacketSize (Meter meter) {
-		return meter.id.toString().length() + meter.dimension.getValue().toString().length() + 4 * 4;
 	}
 
 	private static void writeMeter (PacketByteBuf buffer, Meter meter) {
