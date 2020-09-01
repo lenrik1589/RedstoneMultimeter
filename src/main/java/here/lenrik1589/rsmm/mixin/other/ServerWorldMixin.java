@@ -37,7 +37,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 
 @Mixin(ServerWorld.class)
-public abstract class World{
+public abstract class ServerWorldMixin {
 	@Shadow
 	@Final
 	private MinecraftServer server;

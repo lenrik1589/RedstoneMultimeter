@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.RenderUtils;
 import fi.dy.masa.malilib.util.Color4f;
+import here.lenrik1589.rsmm.Names;
 import here.lenrik1589.rsmm.config.ConfigHandler;
 import here.lenrik1589.rsmm.time.TickTime;
 import net.fabricmc.api.EnvType;
@@ -149,6 +150,10 @@ public class Render implements IRenderer {
 					//TODO: figure out how to get/store the meter value to render it here.
 					MeterEvent lastEvent;
 					World world = MinecraftClient.getInstance().world;
+					if (world == null){
+						Names.LOGGER.info("world is null wtf! exiting hud rendering");
+						return;
+					}
 					long currentTick = (ConfigHandler.Rendering.paused? ConfigHandler.Rendering.pauseTick : world.getTime()) - previewLength + tickPos - ConfigHandler.Rendering.scrollPosition;
 					if (meter.events.size() > 0) {
 						 int eventInd = meter.events.size() - 1;

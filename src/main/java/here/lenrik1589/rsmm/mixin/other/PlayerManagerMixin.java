@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PlayerManager.class)
-public class PlayerManagers {
+public class PlayerManagerMixin {
 	@Final
 	@Shadow
 	private MinecraftServer server;

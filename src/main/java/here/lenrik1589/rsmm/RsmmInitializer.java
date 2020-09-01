@@ -265,7 +265,10 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 				MeterManager.Action action = buffer.readEnumConstant(MeterManager.Action.class);
 				final Meter meter;
 				switch (action) {
-					case add -> meter = readMeter(buffer);
+					case add -> {
+						meter = readMeter(buffer);
+						meter.setMeterable((Meterable)(MinecraftClient.getInstance().world.getBlockState(meter.position).getBlock()));
+					}
 					case name -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier()).setName(buffer.readText());
 					case color -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier()).setColor(buffer.readInt());
 					case remove -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier());
@@ -289,9 +292,20 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 		public static class EventPacketHandler {
 			public void onPacketReceived (PacketContext context, PacketByteBuf buffer) {
 				MeterEvent event = MeterEvent.readEvent(buffer);
+				BlockPos nevPos;
+				if(event.event == MeterEvent.Event.moved){
+					nevPos = buffer.readBlockPos();
+				}else{
+					nevPos = null;
+				}
 //				Names.LOGGER.info("meter event \"{}\" for id {} on tick {} №{} in phase {};", event.event, event.meterId, event.time.tick, event.time.index, event.time.phase);
 				context.getTaskQueue().execute(
-								() -> MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).events.add(event)
+								() -> {
+									MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).events.add(event);
+									if(event.event == MeterEvent.Event.moved){
+										MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).position = nevPos;
+									}
+								}
 				);
 			}
 

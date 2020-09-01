@@ -8,7 +8,9 @@ import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Meter {
 	public Text name;
@@ -18,6 +20,7 @@ public class Meter {
 	private Meterable meterable;
 	public Integer color;
 	public List<MeterEvent> events = new ArrayList<>();
+	public Map<Long, Integer> tickToEventIndex = new HashMap<>();
 	public boolean movable = false;
 
 	public Meter(BlockPos pos, RegistryKey<World> dimension, Identifier id){

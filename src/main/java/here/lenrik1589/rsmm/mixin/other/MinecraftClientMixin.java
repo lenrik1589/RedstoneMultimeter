@@ -6,7 +6,7 @@ import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(MinecraftClient.class)
-public class Client implements MeterI {
+public class MinecraftClientMixin implements MeterI {
 
 	public final MeterManager meterManager = new MeterManager();
 

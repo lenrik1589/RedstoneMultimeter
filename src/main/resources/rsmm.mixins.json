@@ -11,18 +11,19 @@
 		"block.DispenserBlockMixin",
 		"block.LeverBlockMixin",
 		"block.ObserverBlockMixin",
+		"block.PistonBlockEntityMixin",
 		"block.PistonBlockMixin",
 		"block.PoweredRailBlockMixin",
 		"block.RedstoneTorchBlockMixin",
 		"block.RedstoneWireBlockMixin",
 		"block.RepeaterBlockMixin",
 		"block.TripwireHookBlockMixin",
-		"other.PlayerManagers",
-		"other.Server",
-		"other.World"
+		"other.MinecraftServerMixin",
+		"other.PlayerManagerMixin",
+		"other.ServerWorldMixin"
 	],
 	"client": [
-		"other.Client"
+		"other.MinecraftClientMixin"
 	],
 	"server": [
 	]
