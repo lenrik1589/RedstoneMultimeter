@@ -4,8 +4,9 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.*;
-import here.lenrik1589.rsmm.Names;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.TranslatableText;
 
@@ -15,18 +16,15 @@ import java.util.regex.Pattern;
 
 public class IntColorArgument implements ArgumentType<Integer> {
 	private static final SimpleCommandExceptionType MALFORMED_COLOR = new SimpleCommandExceptionType(new TranslatableText("rsmm.error.malformed_color"));
-	private static final Dynamic2CommandExceptionType TOO_BIG_VALUE = new Dynamic2CommandExceptionType(IntColorArgument::getExceptionText);
+	private static final Dynamic2CommandExceptionType TOO_BIG_VALUE = new Dynamic2CommandExceptionType((value, key) -> new TranslatableText("rsmm.error.too_big_value", value, key));
 
-	private static TranslatableText getExceptionText(Object value, Object key){
-		return new TranslatableText("rsmm.error.too_big_value", value, key);
-	}
 
 	public static IntColorArgument color () {
 		return new IntColorArgument();
 	}
 
 	public static Integer getColor (CommandContext<ServerCommandSource> context, String name) {
-		return context.getArgument(name, Integer.class);
+		return context.getArgument(name, int.class);
 	}
 
 	@Override
@@ -52,11 +50,11 @@ public class IntColorArgument implements ArgumentType<Integer> {
 				int g = Integer.parseInt(matcher.group("g") == null ? matcher.group("sg") : matcher.group("g"));
 				int b = Integer.parseInt(matcher.group("b") == null ? matcher.group("sb") : matcher.group("b"));
 				if (r > 255) {
-					throw TOO_BIG_VALUE.create(r, "§c§lRed§r");
+					throw TOO_BIG_VALUE.create(r, "Red");//"§c§lRed§r");
 				} else if (g > 255) {
-					throw TOO_BIG_VALUE.create(g, "§a§lGreen§r");
+					throw TOO_BIG_VALUE.create(g, "Green");//"§a§lGreen§r");
 				} else if (b > 255) {
-					throw TOO_BIG_VALUE.create(b, "§9§lBlue§r");
+					throw TOO_BIG_VALUE.create(b, "Blue");//"§9§lBlue§r");
 				}
 				out = (r << 16) + (g << 8) + b;
 			} else {
@@ -74,10 +72,28 @@ public class IntColorArgument implements ArgumentType<Integer> {
 
 	public static final Collection<String> EXAMPLES = ImmutableList.of(
 					"#FAB41C", // hex color
+					"0x53ee71", // hex color
 					"1425514", // plain int for nerds
 					"[100, 255, 13]", // most adequate, array representation
+					"[r:100, g:2, b:13]", // some freedom
 					"[\"r\":194, \"g\":17, \"b\":136]" // wait, what, ahh, yes, 2xsaiko
 	);
+
+	@Override
+	public boolean equals(final Object o) {
+		if (this == o) return true;
+		return o instanceof IntColorArgument;
+	}
+
+	@Override
+	public int hashCode() {
+		return 1589;
+	}
+
+	@Override
+	public String toString() {
+		return "color()";
+	}
 
 	@Override
 	public Collection<String> getExamples () {

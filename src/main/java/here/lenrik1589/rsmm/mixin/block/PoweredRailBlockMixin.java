@@ -8,7 +8,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(PoweredRailBlock.class)
-public abstract class PoweredRailBlockMixin implements Meterable {
+public abstract class PoweredRailBlockMixin extends BlockMixin implements Meterable {
 
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
         return state.get(PoweredRailBlock.POWERED);

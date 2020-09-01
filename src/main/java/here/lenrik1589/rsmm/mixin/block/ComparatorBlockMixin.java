@@ -10,7 +10,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(ComparatorBlock.class)
-public abstract class ComparatorBlockMixin implements Meterable {
+public abstract class ComparatorBlockMixin extends BlockMixin implements Meterable {
 
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
 

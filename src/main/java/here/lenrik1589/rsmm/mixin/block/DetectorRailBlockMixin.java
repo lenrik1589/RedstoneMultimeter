@@ -8,7 +8,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(DetectorRailBlock.class)
-public abstract class DetectorRailBlockMixin implements Meterable {
+public abstract class DetectorRailBlockMixin extends BlockMixin implements Meterable {
 
     @Override
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {

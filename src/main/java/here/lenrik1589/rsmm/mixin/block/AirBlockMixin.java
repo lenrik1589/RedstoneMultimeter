@@ -8,7 +8,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(AirBlock.class)
-public abstract class AirBlockMixin implements Meterable {
+public abstract class AirBlockMixin extends BlockMixin implements Meterable {
 
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
         return false;

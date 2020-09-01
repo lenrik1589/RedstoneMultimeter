@@ -17,13 +17,13 @@
 		"block.RedstoneWireBlockMixin",
 		"block.RepeaterBlockMixin",
 		"block.TripwireHookBlockMixin",
-		"other.Dedicated",
-		"other.Integrated"
+		"other.PlayerManagers",
+		"other.Server",
+		"other.World"
 	],
 	"client": [
 		"other.Client"
 	],
 	"server": [
-		"other.Server"
 	]
 }

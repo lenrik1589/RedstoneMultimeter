@@ -11,6 +11,9 @@
 		"main": [
 			"here.lenrik1589.rsmm.RsmmInitializer"
 		],
+		"client": [
+			"here.lenrik1589.rsmm.RsmmInitializer"
+		],
 		"modmenu": [
 			"here.lenrik1589.rsmm.ModMenuImpl"
 		]

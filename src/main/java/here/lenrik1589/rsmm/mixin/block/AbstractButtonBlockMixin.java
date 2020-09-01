@@ -8,10 +8,11 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(AbstractButtonBlock.class)
-public abstract class AbstractButtonBlockMixin implements Meterable {
+public abstract class AbstractButtonBlockMixin extends BlockMixin implements Meterable {
 
-    public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
-        return state.get(AbstractButtonBlock.POWERED);
-    }
+
+	public boolean isPowered (BlockState state, WorldAccess source, BlockPos pos) {
+		return state.get(AbstractButtonBlock.POWERED);
+	}
 
 }

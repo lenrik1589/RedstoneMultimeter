@@ -8,7 +8,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(TripwireHookBlock.class)
-public abstract class TripwireHookBlockMixin implements Meterable {
+public abstract class TripwireHookBlockMixin extends BlockMixin implements Meterable {
 
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
         return state.get(TripwireHookBlock.POWERED);

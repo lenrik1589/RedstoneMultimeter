@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(AbstractPressurePlateBlock.class)
-public abstract class AbstractPressurePlateBlockMixin implements Meterable {
+public abstract class AbstractPressurePlateBlockMixin extends BlockMixin implements Meterable {
 
 	@Shadow
 	protected abstract int getRedstoneOutput (World world, BlockPos pos);

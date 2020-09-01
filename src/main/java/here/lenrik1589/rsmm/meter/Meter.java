@@ -7,6 +7,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Meter {
 	public Text name;
 	public final Identifier id;
@@ -14,6 +17,7 @@ public class Meter {
 	public BlockPos position;
 	private Meterable meterable;
 	public Integer color;
+	public List<MeterEvent> events = new ArrayList<>();
 	public boolean movable = false;
 
 	public Meter(BlockPos pos, RegistryKey<World> dimension, Identifier id){

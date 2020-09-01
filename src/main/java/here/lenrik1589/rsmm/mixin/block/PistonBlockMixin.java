@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(PistonBlock.class)
-public abstract class PistonBlockMixin implements Meterable {
+public abstract class PistonBlockMixin extends BlockMixin implements Meterable {
 
     @Shadow
     private boolean shouldExtend(World worldIn, BlockPos pos, Direction facing) { return false; }

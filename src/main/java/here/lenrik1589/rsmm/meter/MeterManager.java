@@ -3,9 +3,13 @@ package here.lenrik1589.rsmm.meter;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
+import here.lenrik1589.rsmm.config.ConfigHandler;
+import it.unimi.dsi.fastutil.booleans.BooleanList;
+import it.unimi.dsi.fastutil.booleans.BooleanLists;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.LiteralText;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -22,6 +26,10 @@ public class MeterManager {
 	public final LinkedHashMap<Identifier, Meter> METERS = new LinkedHashMap<>();
 	private static final DynamicCommandExceptionType METER_EXISTS = new DynamicCommandExceptionType(a -> new TranslatableText("rsmm.error.meter_exists", a));
 
+	public int cursorPosition = ConfigHandler.Generic.previewCursorPosition.getIntegerValue();
+	public LinkedHashMap<Identifier, BooleanList> cachedPreviewHistory = new LinkedHashMap<>();
+	public LinkedHashMap<Identifier, BooleanList> meterStateHistory = new LinkedHashMap<>();
+
 	public Identifier getMeterId (BlockPos pos, RegistryKey<World> dimension) throws NoSuchObjectException {
 		for (Map.Entry<Identifier, Meter> entry : METERS.entrySet()) {
 			Meter m = entry.getValue();
@@ -30,6 +38,22 @@ public class MeterManager {
 			}
 		}
 		throw new NoSuchObjectException("maybe add it first?");
+	}
+
+	public int listMeters (CommandContext<ServerCommandSource> context) {
+		if(METERS.isEmpty()){
+			context.getSource().sendFeedback(new LiteralText("Meter list is empty."), false);
+			return 1;
+		}
+		for (Object id : METERS.keySet().stream().sorted().toArray()) {
+			Meter m = METERS.get(id);
+			context.getSource().sendFeedback(new LiteralText(m.id.toString() + " : " + m.name.asString()), false);
+		}
+		return 0;
+	}
+
+	public Meter getMeter (BlockPos pos, RegistryKey<World> dimesion) throws NoSuchObjectException {
+		return METERS.get(getMeterId(pos, dimesion));
 	}
 
 	public enum Action {
@@ -66,6 +90,7 @@ public class MeterManager {
 		if (METERS.containsKey(meter.id))
 			throw METER_EXISTS.create(meter.id.toString());
 		METERS.put(meter.id, meter);
+		meterStateHistory.put(meter.id, BooleanLists.EMPTY_LIST);
 
 	}
 

@@ -9,7 +9,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(DispenserBlock.class)
-public abstract class DispenserBlockMixin implements Meterable {
+public abstract class DispenserBlockMixin extends BlockMixin implements Meterable {
 
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
         if (source instanceof World) {

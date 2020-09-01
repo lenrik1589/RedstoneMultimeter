@@ -8,7 +8,7 @@ import net.minecraft.world.WorldAccess;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(RepeaterBlock.class)
-public abstract class RepeaterBlockMixin implements Meterable {
+public abstract class RepeaterBlockMixin extends BlockMixin implements Meterable {
 
     public boolean isPowered(BlockState state, WorldAccess source, BlockPos pos) {
         return state.get(RepeaterBlock.POWERED);

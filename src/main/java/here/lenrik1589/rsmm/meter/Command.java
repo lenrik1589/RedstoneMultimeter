@@ -5,6 +5,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import here.lenrik1589.rsmm.Names;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.network.ServerSidePacketRegistry;
@@ -12,14 +14,20 @@ import net.minecraft.command.argument.BlockPosArgumentType;
 import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.command.argument.TextArgumentType;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.server.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 
+import java.rmi.NoSuchObjectException;
+import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -99,10 +107,7 @@ public class Command {
 																										)
 																						)
 																		).suggests(
-																						(commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(
-																										MeterManager.get(commandContext.getSource().getMinecraftServer()).METERS.keySet(),
-																										suggestionsBuilder
-																						)
+																						Command::suggestIdentifiers
 																		)
 														)
 										)
@@ -131,19 +136,14 @@ public class Command {
 																						)
 																		)
 														).suggests(
-																		(commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(
-																						MeterManager.get(commandContext.getSource().getMinecraftServer()).METERS.keySet(),
-																						suggestionsBuilder
-																		)
+																		Command::suggestIdentifiers
 														)
 										)
 						).then(
 										literal(
 														"list"
 										).executes(
-														context -> listMeters(
-																		context.getSource()
-														)
+														context -> MeterManager.get(context.getSource().getMinecraftServer()).listMeters(context)
 										)
 						).then(
 										literal(
@@ -167,7 +167,7 @@ public class Command {
 																						)
 																		)
 														).suggests(
-																		(commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(MeterManager.get(commandContext.getSource().getMinecraftServer()).METERS.keySet(), suggestionsBuilder)
+																		Command::suggestIdentifiers
 														)
 										)
 						).then(
@@ -264,16 +264,28 @@ public class Command {
 														Color.valueOf(name.toUpperCase()).color
 										)
 						).suggests(
-										(commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(MeterManager.get(commandContext.getSource().getMinecraftServer()).METERS.keySet(), suggestionsBuilder)
+										Command::suggestIdentifiers
 						)
 		);
 	}
 
+	static CompletableFuture<Suggestions> suggestIdentifiers (CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) {
+		MeterManager manager = MeterManager.get(context.getSource().getMinecraftServer());
+		Set<Identifier> candidates = manager.METERS.keySet();
+		String string = builder.getRemaining().toLowerCase(Locale.ROOT);
+		try {
+			BlockHitResult hit = (BlockHitResult) context.getSource().getPlayer().rayTrace(32, 1, false);
+			Identifier id = manager.getMeterId(hit.getBlockPos(), context.getSource().getWorld().getRegistryKey());
+			candidates = Set.of(id);
+		} catch (CommandSyntaxException | NoSuchObjectException ignored) {
+		}
+		CommandSource.forEachMatching(candidates, string, identifier -> identifier, identifier -> builder.suggest(identifier.toString()));
+		builder.suggest("all");
+		return builder.buildFuture();
+	}
+
 	private static int listMeters (ServerCommandSource source) {
-		source.sendFeedback(
-						new LiteralText(
-										MeterManager.get(source.getMinecraftServer()).listMeters()
-						), false);
+		source.sendFeedback(new LiteralText(MeterManager.get(source.getMinecraftServer()).listMeters()), false);
 		return 0;
 	}
 
@@ -293,9 +305,8 @@ public class Command {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
 		buffer.writeEnumConstant(MeterManager.Action.clear);
 		MeterManager.get(source.getMinecraftServer()).METERS.clear();
-		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
-						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
-		);
+		CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(Names.METER_CHANNEL, buffer);
+		source.getMinecraftServer().getPlayerManager().sendToAll(packet);
 		return 0;
 	}
 
@@ -361,11 +372,12 @@ public class Command {
 		return 0;
 	}
 
-	private static void writeMeter (PacketByteBuf buffer, Meter meter) {
+	public static void writeMeter (PacketByteBuf buffer, Meter meter) {
 		buffer.writeIdentifier(meter.id);
 		buffer.writeBlockPos(meter.position);
 		buffer.writeIdentifier(meter.dimension.getValue());
 		buffer.writeInt(meter.color);
 		buffer.writeText(meter.name);
 	}
+
 }
