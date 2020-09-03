@@ -12,13 +12,7 @@ import fi.dy.masa.malilib.hotkeys.KeyAction;
 import fi.dy.masa.malilib.interfaces.IInitializationHandler;
 import here.lenrik1589.rsmm.config.ConfigHandler;
 import here.lenrik1589.rsmm.config.RsmmConfigGui;
-import here.lenrik1589.rsmm.meter.Command;
-import here.lenrik1589.rsmm.meter.Meter;
-import here.lenrik1589.rsmm.meter.MeterManager;
-import here.lenrik1589.rsmm.meter.MeterEvent;
-import here.lenrik1589.rsmm.meter.Meterable;
-import here.lenrik1589.rsmm.meter.IntColorArgument;
-import here.lenrik1589.rsmm.meter.Render;
+import here.lenrik1589.rsmm.meter.*;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -30,7 +24,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
@@ -41,13 +34,11 @@ import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
 import java.rmi.NoSuchObjectException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 
-	Packets.MeterS2CPacketHandler MCPH = new Packets.MeterS2CPacketHandler();
-	Packets.MeterC2SPacketHandler MSPH = new Packets.MeterC2SPacketHandler();
+	Packets.MeterS2CPacketHandler CMPH = new Packets.MeterS2CPacketHandler();
+	Packets.MeterC2SPacketHandler SMPH = new Packets.MeterC2SPacketHandler();
 	Packets.EventPacketHandler EPH = new Packets.EventPacketHandler();
 
 	@Override
@@ -56,11 +47,11 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 		CommandRegistrationCallback.EVENT.register(Command::register);
 		ServerSidePacketRegistry.INSTANCE.register(
 						Names.METER_CHANNEL,
-						MSPH::onPacketReceived
+						SMPH::onPacketReceived
 		);
 		ServerSidePacketRegistry.INSTANCE.register(
 						Names.EVENT_CHANNEL,
-						(context, buffer) -> Names.LOGGER.info("packet \"{}\" in context {}", buffer.array(), context)
+						(context, buffer) -> Names.LOGGER.info("packet {} in context {}", buffer.array(), context)
 		);
 		InitializationHandler.getInstance().registerInitializationHandler(new Initializer());
 	}
@@ -72,7 +63,7 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 		);
 		ClientSidePacketRegistry.INSTANCE.register(
 						Names.METER_CHANNEL,
-						MCPH::onPacketReceived
+						CMPH::onPacketReceived
 		);
 	}
 
@@ -141,7 +132,7 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 			public boolean onKeyAction (KeyAction action, IKeybind key) {
 				if (ConfigHandler.Rendering.paused) {
 					ConfigHandler.Rendering.cursorPosition -= 1;
-					if (ConfigHandler.Rendering.cursorPosition < 1){
+					if (ConfigHandler.Rendering.cursorPosition < 1) {
 						ConfigHandler.Rendering.cursorPosition = 1;
 						ConfigHandler.Rendering.scrollPosition = Math.max(ConfigHandler.Rendering.scrollPosition - 1, 0);
 					}
@@ -156,7 +147,7 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 			public boolean onKeyAction (KeyAction action, IKeybind key) {
 				if (ConfigHandler.Rendering.paused) {
 					ConfigHandler.Rendering.cursorPosition += 1;
-					if(ConfigHandler.Rendering.cursorPosition > ConfigHandler.Generic.previewLength.getIntegerValue()){
+					if (ConfigHandler.Rendering.cursorPosition > ConfigHandler.Generic.previewLength.getIntegerValue()) {
 						ConfigHandler.Rendering.cursorPosition = ConfigHandler.Generic.previewLength.getIntegerValue();
 						ConfigHandler.Rendering.scrollPosition = Math.min(ConfigHandler.Rendering.scrollPosition + 1, ConfigHandler.Generic.maxHistory.getIntegerValue() - ConfigHandler.Generic.previewLength.getIntegerValue());
 					}
@@ -267,7 +258,7 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 				switch (action) {
 					case add -> {
 						meter = readMeter(buffer);
-						meter.setMeterable((Meterable)(MinecraftClient.getInstance().world.getBlockState(meter.position).getBlock()));
+						meter.setMeterable((Meterable) (MinecraftClient.getInstance().world.getBlockState(meter.position).getBlock()));
 					}
 					case name -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier()).setName(buffer.readText());
 					case color -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier()).setColor(buffer.readInt());
@@ -293,16 +284,16 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 			public void onPacketReceived (PacketContext context, PacketByteBuf buffer) {
 				MeterEvent event = MeterEvent.readEvent(buffer);
 				BlockPos nevPos;
-				if(event.event == MeterEvent.Event.moved){
+				if (event.event == MeterEvent.Event.moved) {
 					nevPos = buffer.readBlockPos();
-				}else{
+				} else {
 					nevPos = null;
 				}
-//				Names.LOGGER.info("meter event \"{}\" for id {} on tick {} №{} in phase {};", event.event, event.meterId, event.time.tick, event.time.index, event.time.phase);
+				//				Names.LOGGER.info("meter event \"{}\" for id {} on tick {} №{} in phase {};", event.event, event.meterId, event.time.tick, event.time.index, event.time.phase);
 				context.getTaskQueue().execute(
 								() -> {
 									MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).events.add(event);
-									if(event.event == MeterEvent.Event.moved){
+									if (event.event == MeterEvent.Event.moved) {
 										MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).position = nevPos;
 									}
 								}

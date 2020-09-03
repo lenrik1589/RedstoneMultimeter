@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import here.lenrik1589.rsmm.Names;
@@ -17,8 +18,8 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.server.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -34,6 +35,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 
 
 public class Command {
+	private static final DynamicCommandExceptionType METER_EXISTS = new DynamicCommandExceptionType(a -> new TranslatableText("rsmm.error.meter_exists", a));
 	private static final Random random = new Random();
 	//	public static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (commandContext, suggestionsBuilder) -> CommandSource.suggestIdentifiers(
 	//					((MeterManager)commandContext.getSource().getMinecraftServer()).getMeterIds,
@@ -284,11 +286,6 @@ public class Command {
 		return builder.buildFuture();
 	}
 
-	private static int listMeters (ServerCommandSource source) {
-		source.sendFeedback(new LiteralText(MeterManager.get(source.getMinecraftServer()).listMeters()), false);
-		return 0;
-	}
-
 	private static int removeMeter (ServerCommandSource source, Identifier id) {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
 		buffer.writeEnumConstant(MeterManager.Action.remove);
@@ -333,13 +330,17 @@ public class Command {
 						source.getWorld().getRegistryKey(),
 						id
 		).setColor(Color.getNextColor().color);
-		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
-		buffer.writeEnumConstant(MeterManager.Action.add);
-		writeMeter(buffer, meter);
-		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
-						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
-		);
-		MeterManager.get(source.getMinecraftServer()).addMeter(meter);
+		if(MeterManager.get(source.getMinecraftServer()).addMeter(meter)) {
+			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+			buffer.writeEnumConstant(MeterManager.Action.add);
+			writeMeter(buffer, meter);
+			source.getMinecraftServer().getPlayerManager().sendToAll(new CustomPayloadS2CPacket(Names.METER_CHANNEL, buffer));
+//			source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+//							player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+//			);
+		}else {
+			throw METER_EXISTS.create(meter.id);
+		}
 		return 0;
 	}
 
@@ -350,13 +351,17 @@ public class Command {
 						id,
 						name
 		).setColor(Color.getNextColor().color);
-		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
-		buffer.writeEnumConstant(MeterManager.Action.add);
-		writeMeter(buffer, meter);
-		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
-						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
-		);
-		MeterManager.get(source.getMinecraftServer()).addMeter(meter);
+		if(MeterManager.get(source.getMinecraftServer()).addMeter(meter)) {
+			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+			buffer.writeEnumConstant(MeterManager.Action.add);
+			writeMeter(buffer, meter);
+			source.getMinecraftServer().getPlayerManager().sendToAll(new CustomPayloadS2CPacket(Names.METER_CHANNEL, buffer));
+//			source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
+//							player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
+//			);
+		}else{
+			throw METER_EXISTS.create(meter.id);
+		}
 		return 0;
 	}
 

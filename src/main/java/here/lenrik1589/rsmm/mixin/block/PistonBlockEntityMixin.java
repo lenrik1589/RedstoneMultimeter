@@ -34,17 +34,19 @@ public class PistonBlockEntityMixin {
 					)
 	)
 	private void pistonTick (CallbackInfo info){
-		PistonBlockEntity be = ((PistonBlockEntity) (Object) this);
-//		Names.LOGGER.info("piston moved block, facing {} {} and in position {}", this.facing, this.extending, be.getPos());
-		try {
-			BlockPos oldPos = be.getPos().offset(extending ? facing.getOpposite() : facing);
-			Identifier meterId = MeterManager.get(be.getWorld().getServer()).getMeterId(oldPos, be.getWorld().getRegistryKey());
-			Names.LOGGER.info("piston moved meter, facing {}, extending {} and into position {} from {} With id {}", this.facing, this.extending, be.getPos(), oldPos, meterId);
-			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
-			new MeterEvent(((TickTimeGetter) be.getWorld().getServer()).getTime(), meterId, MeterEvent.Event.moved).writeEvent(buffer);
-			buffer.writeBlockPos(be.getPos());
-			be.getWorld().getServer().getPlayerManager().sendToAll(new CustomPayloadS2CPacket(Names.EVENT_CHANNEL, buffer));
-		} catch (NoSuchObjectException ignored){
-		}
+		Names.LOGGER.info("unused mixin method");
+//		PistonBlockEntity be = ((PistonBlockEntity) (Object) this);
+////		Names.LOGGER.info("piston moved block, facing {} {} and in position {}", this.facing, this.extending, be.getPos());
+//		try {
+//			BlockPos oldPos = be.getPos().offset(extending ? facing.getOpposite() : facing);
+//			Identifier meterId = MeterManager.get(be.getWorld().getServer()).getMeterId(oldPos, be.getWorld().getRegistryKey());
+//			Names.LOGGER.info("piston moved meter, facing {}, extending {} and into position {} from {} With id {}", this.facing, this.extending, be.getPos(), oldPos, meterId);
+//			MeterManager.get(be.getWorld().getServer()).METERS.get(meterId).position = be.getPos();
+//			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+//			new MeterEvent(((TickTimeGetter) be.getWorld().getServer()).getTime(), meterId, MeterEvent.Event.moved).writeEvent(buffer);
+//			buffer.writeBlockPos(be.getPos());
+//			be.getWorld().getServer().getPlayerManager().sendToAll(new CustomPayloadS2CPacket(Names.EVENT_CHANNEL, buffer));
+//		} catch (NoSuchObjectException ignored){
+//		}
 	}
 }
