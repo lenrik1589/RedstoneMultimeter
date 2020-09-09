@@ -92,14 +92,7 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 			ConfigManager.getInstance().registerConfigHandler(Names.ModId, new ConfigHandler());
 			InputEventHandler.getKeybindManager().registerKeybindProvider(RsmmInputHandler.getInstance());
 
-			ConfigHandler.Generic.openConfig.getKeybind().setCallback(new RsmmInputHandler.Inputs.OpenConfigGui());
-			ConfigHandler.Generic.pauseKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.PausePreview());
-			ConfigHandler.Generic.meterKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ToggleMeter());
-			ConfigHandler.Generic.previewKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.TogglePreviewVisible());
-			ConfigHandler.Generic.upKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollUp());
-			ConfigHandler.Generic.downKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollDown());
-			ConfigHandler.Generic.leftKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollLeft());
-			ConfigHandler.Generic.rightKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollRight());
+			RsmmInputHandler.setCallbacks();
 			ConfigHandler.Generic.previewLength.setValueChangeCallback(config -> ConfigHandler.Generic.previewCursorPosition.setMaxValue(config.getIntegerValue()));
 			ConfigHandler.Generic.previewCursorPosition.setValueChangeCallback(config -> ConfigHandler.Rendering.cursorPosition = ConfigHandler.Rendering.paused ? ConfigHandler.Rendering.cursorPosition : config.getIntegerValue());
 
@@ -174,7 +167,10 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 									switch (action) {
 										case add -> MeterManager.get(MinecraftClient.getInstance()).addMeter(meter);
 										case remove -> MeterManager.get(MinecraftClient.getInstance()).removeMeter(meter);
-										case clear -> MeterManager.get(MinecraftClient.getInstance()).clear();
+										case clear -> {
+											MeterManager.get(MinecraftClient.getInstance()).clear();
+											Render.eventNumbers.clear();
+										}
 									}
 									Names.LOGGER.info("Received packet for {}, with action {}", meter.id, action);
 								}

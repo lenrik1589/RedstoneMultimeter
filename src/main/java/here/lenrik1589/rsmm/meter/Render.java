@@ -159,119 +159,169 @@ public class Render implements IRenderer {
 				width = Math.max(width, textRenderer.getWidth(meter.name) + 6);
 			}
 			profiler.swap("tick renderer");//                                                                                                    tick renderer +2
-			profiler.push("buffer setup");
-			Tessellator tessellator = Tessellator.getInstance();
-			BufferBuilder buffer = tessellator.getBuffer();
-			RenderSystem.enableBlend();
-			RenderSystem.disableTexture();
-			RenderSystem.defaultBlendFunc();
-			buffer.begin(GL46.GL_QUADS, VertexFormats.POSITION_COLOR);
-			profiler.pop();
-			profiler.push("meter getter");
-			for (int i = start; i < end; i++) {
-				Meter meter = (Meter) manager.METERS.values().toArray()[i];
-				profiler.swap(meter.id.toString());//                                                                                                       one meter +3
-				fastFill(//meter nameplate outline
-								0, meterHeight * (i - start),
-								width + 1, meterHeight * (i - start + 1),
-								meter.color | 0xff000000, buffer);//0xff2c2b2b
-				fastFill(//meter nameplate background
-								1, 1 + meterHeight * (i - start),
-								width, meterHeight * (i - start + 1),
-								darkColor, buffer
-				);
-				profiler.push("ticks");//                                                                                                          ticks renderer +4
-				for (int tickPos = previewLength - 1; tickPos >= 0; tickPos--) {
-					int color = previewPos == tickPos ? highlightColor : outlineColor;
-					fastFill(//tick outline
-									width + tickPos * tickWidth, meterHeight * (i - start),
-									width + (tickPos + 1) * tickWidth, meterHeight * (i + 1 - start),
-									color, buffer
+			if (!MinecraftClient.getInstance().options.debugEnabled){
+				profiler.push("buffer setup");
+				Tessellator tessellator = Tessellator.getInstance();
+				BufferBuilder buffer = tessellator.getBuffer();
+				RenderSystem.enableBlend();
+				RenderSystem.disableTexture();
+				RenderSystem.defaultBlendFunc();
+				buffer.begin(GL46.GL_QUADS, VertexFormats.POSITION_COLOR);
+				profiler.pop();
+				profiler.push("meter getter");
+				for (int i = start; i < end; i++) {
+					Meter meter = (Meter) manager.METERS.values().toArray()[i];
+					profiler.swap(meter.id.toString());//                                                                                                       one meter +3
+					fastFill(//meter nameplate outline
+									0, meterHeight * (i - start),
+									width + 1, meterHeight * (i - start + 1),
+									meter.color | 0xff000000, buffer);//0xff2c2b2b
+					fastFill(//meter nameplate background
+									1, 1 + meterHeight * (i - start),
+									width, meterHeight * (i - start + 1),
+									darkColor, buffer
 					);
-					//TODO: figure out how to get/store the meter value to render it here properly.
-					long currentTick = (ConfigHandler.Rendering.paused ? ConfigHandler.Rendering.pauseTick : world.getTime()) - previewLength + tickPos - ConfigHandler.Rendering.scrollPosition;
-					MeterEvent lastEvent = meter.eventStorage.getLastPowerBefore(currentTick);
-					if (lastEvent == null) {// get an empty event
-						MeterEvent.Event action;
-						Class<? extends Block> t = world.getBlockState(meter.position).getBlock().getClass();
-						if (!t.isInstance(meter.getMeterable().getBlock())) {
-							meter.setMeterable((Meterable) world.getBlockState(meter.position).getBlock());
-						}
-						if (meter.getMeterable().isPowered(world.getBlockState(meter.position), world, meter.position)) {
-							action = MeterEvent.Event.powered;
-						} else {
-							action = MeterEvent.Event.unpowered;
-						}
-						lastEvent = new MeterEvent(new TickTime(0, TickTime.Phase.start), meter.id, action);
-					}
-					boolean powered = lastEvent.event == MeterEvent.Event.powered,
-									eventTick = lastEvent.time.tick == currentTick;
-					if (eventTick) {
-						fastFill(
-										width + 1 + tickPos * tickWidth, 1 + meterHeight * (i - start),
+					profiler.push("ticks");//                                                                                                          ticks renderer +4
+					for (int tickPos = previewLength - 1; tickPos >= 0; tickPos--) {
+						int color = previewPos == tickPos ? highlightColor : outlineColor;
+						fastFill(//tick outline
+										width + tickPos * tickWidth, meterHeight * (i - start),
 										width + (tickPos + 1) * tickWidth, meterHeight * (i + 1 - start),
-										powered ? darkColor : (meter.color | 0xff000000), buffer
+										color, buffer
+						);
+						//NOTE I don't think this piece of code is in any vay good/ optimised at all, it just works…
+						long currentTick = (ConfigHandler.Rendering.paused ? ConfigHandler.Rendering.pauseTick : world.getTime()) - previewLength + tickPos - ConfigHandler.Rendering.scrollPosition;
+						MeterEvent lastEvent = meter.eventStorage.getLastPowerBefore(currentTick);
+						if (lastEvent == null) {// get an empty event
+							MeterEvent.Event action;
+							Class<? extends Block> t = world.getBlockState(meter.position).getBlock().getClass();
+							if (!t.isInstance(meter.getMeterable().getBlock())) {
+								meter.setMeterable((Meterable) world.getBlockState(meter.position).getBlock());
+							}
+							if (meter.getMeterable().isPowered(world.getBlockState(meter.position), world, meter.position)) {
+								action = MeterEvent.Event.powered;
+							} else {
+								action = MeterEvent.Event.unpowered;
+							}
+							lastEvent = new MeterEvent(new TickTime(0, TickTime.Phase.start), meter.id, action);
+						}
+						boolean powered = lastEvent.event == MeterEvent.Event.powered,
+										eventTick = lastEvent.time.tick == currentTick;
+						if (eventTick) {
+							fastFill(
+											width + 1 + tickPos * tickWidth, 1 + meterHeight * (i - start),
+											width + (tickPos + 1) * tickWidth, meterHeight * (i + 1 - start),
+											powered ? darkColor : (meter.color | 0xff000000), buffer
+							);
+						}
+						fastFill(
+										width + (eventTick ? 2 : 1) + tickPos * tickWidth, (eventTick ? 2 : 1) + meterHeight * (i - start),
+										width + (eventTick ? -1 : 0) + (tickPos + 1) * tickWidth, meterHeight * (i + 1 - start) + (eventTick ? -1 : 0),
+										powered ? (meter.color | 0xff000000) : darkColor, buffer
 						);
 					}
-					fastFill(
-									width + (eventTick ? 2 : 1) + tickPos * tickWidth, (eventTick ? 2 : 1) + meterHeight * (i - start),
-									width + (eventTick ? -1 : 0) + (tickPos + 1) * tickWidth, meterHeight * (i + 1 - start) + (eventTick ? -1 : 0),
-									powered ? (meter.color | 0xff000000) : darkColor, buffer
-					);
-				}
-				profiler.pop();//                                                                                                                       +2
-			} // per meter render                                                                                                                        +3
-			profiler.pop();//
-			fastFill(
-							0, meterHeight * number,
-							width + 1, 1 + meterHeight * number,
-							((Meter) manager.METERS.values().toArray()[end - 1]).color | 0xff000000, buffer
-			);
-			fastFill(
-							width + 2 - 1 - 1, 1 + meterHeight * number,
-							width + previewLength * tickWidth, meterHeight * number,
-							outlineColor, buffer
-			);
-			fastFill(
-							width + previewLength * tickWidth, 0,
-							width + previewLength * tickWidth + 1, meterHeight * number + 1,
-							outlineColor, buffer
-			);
-			fastFill(
-							width + (previewPos + 1) * tickWidth, 0,
-							width + (previewPos + 1) * tickWidth + 1, meterHeight * number + 1,
-							highlightColor, buffer
-			);
-			fastFill(
-							width + (previewPos) * tickWidth, meterHeight * number,
-							width + (previewPos + 1) * tickWidth, 1 + meterHeight * number,
-							highlightColor, buffer
-			);
-			tessellator.draw();
-			for (int i = start; i < end; i++) {
-				textRenderer.draw(matrices, ((Meter) manager.METERS.values().toArray()[i]).name, 4, 1 + meterHeight * (i - start), 0xcfffffff);
-			}
-			profiler.swap("subtick_events");//                                                                                                  +2
-			if (ConfigHandler.Rendering.paused) {
-				textRenderer.draw(matrices, new TranslatableText("rsmm.gui.paused"), 3, height, 0xcfffffff);
-				long currentTick = ConfigHandler.Rendering.pauseTick - previewLength + ConfigHandler.Rendering.cursorPosition - ConfigHandler.Rendering.scrollPosition;
-				for (int i = start; i < end; i++) {
+					profiler.pop();//                                                                                                                       +2
+				} // per meter render                                                                                                                        +3
+				profiler.pop();//
+				fastFill(
+								0, meterHeight * number,
+								width + 1, 1 + meterHeight * number,
+								((Meter) manager.METERS.values().toArray()[end - 1]).color | 0xff000000, buffer
+				);
+				fastFill(
+								width + 2 - 1 - 1, meterHeight * number,
+								width + previewLength * tickWidth, meterHeight * number + 1,
+								outlineColor, buffer
+				);
+				fastFill(
+								width + previewLength * tickWidth, 0,
+								width + previewLength * tickWidth + 1, meterHeight * number + 1,
+								outlineColor, buffer
+				);
+				fastFill(
+								width + (previewPos + 1) * tickWidth, 0,
+								width + (previewPos + 1) * tickWidth + 1, meterHeight * number + 1,
+								highlightColor, buffer
+				);
+				fastFill(
+								width + (previewPos) * tickWidth, meterHeight * number,
+								width + (previewPos + 1) * tickWidth, 1 + meterHeight * number,
+								highlightColor, buffer
+				);
+				profiler.swap("subtick_events");//                                                                                                  +2
+				long currentTick = ConfigHandler.Rendering.pauseTick /*+ previewLength*/ - ConfigHandler.Rendering.cursorPosition - ConfigHandler.Rendering.scrollPosition;
+				if (ConfigHandler.Rendering.paused) {
+					//				Names.LOGGER.info("{},{},{}",eventNumbers.containsKey(currentTick),currentTick,eventNumbers.keySet());
+					if (eventNumbers.containsKey(currentTick) && eventNumbers.get(currentTick) > 1) {
+						fastFill(
+										width + (previewLength + 2) * tickWidth, 0,
+										width + (previewLength + eventNumbers.get(currentTick) + 2) * tickWidth + 1, meterHeight * number + 1,
+										outlineColor, buffer
+						);
+						for (int i = start; i < end; i++) {
+							Meter meter = (Meter) manager.METERS.values().toArray()[i];
+							for (int tickEvent = 0; tickEvent < eventNumbers.get(currentTick); tickEvent++) {
+								fastFill(
+												width + (previewLength + tickEvent + 2) * tickWidth + 1, meterHeight * (i - start) + 1,
+												width + (previewLength + tickEvent + 3) * tickWidth, meterHeight * (i + 1 - start),
+												darkColor, buffer
+								);
+							}
+							List<MeterEvent> events = meter.eventStorage.meterEvents.get(currentTick);
+							//						MinecraftClient.getInstance().mouse.unlockCursor();
+							if (events != null && !events.isEmpty()) {
+								for (MeterEvent event : events) {
+									if (event.event.isPower()) {
+										fastFill(
+														width + (previewLength + event.time.index + 2) * tickWidth + 1, meterHeight * (i - start) + 1,
+														width + (previewLength + event.time.index + 3) * tickWidth, meterHeight * (i + 1 - start),
+														event.event == MeterEvent.Event.powered ? darkColor : (meter.color | 0xff000000), buffer
+										);
+										fastFill(
+														width + (previewLength + event.time.index + 2) * tickWidth + 2, meterHeight * (i - start) + 2,
+														width + (previewLength + event.time.index + 3) * tickWidth - 1, meterHeight * (i + 1 - start) - 1,
+														!(event.event == MeterEvent.Event.powered) ? darkColor : (meter.color | 0xff000000), buffer
+										);
+									} else if (event.event == MeterEvent.Event.moved) {
+										fastFill(
+														width + (previewLength + event.time.index + 2) * tickWidth, meterHeight * (i - start),
+														width + (previewLength + event.time.index + 3) * tickWidth, meterHeight * (i + 1 - start) + 3,
+														meter.color | 0xff000000, buffer
+										);
+										fastFill(
+														width + (previewLength + event.time.index + 2) * tickWidth, meterHeight * (i - start) + 1,
+														width + (previewLength + event.time.index + 3) * tickWidth, meterHeight * (i + 1 - start) + 2,
+														darkColor, buffer
+										);
 
+									}
+								}
+							}
+						}
+					}
 				}
-			}
-			profiler.swap("pointing at");//                                                                                                     +2
-			HitResult pointing = client.crosshairTarget;
-			if (pointing instanceof BlockHitResult) {
-				try {
-					Identifier id = manager.getMeterId(((BlockHitResult) pointing).getBlockPos(), client.world.getRegistryKey());
-					Meter meter = manager.METERS.get(id);
-					DrawableHelper.drawCenteredText(matrices, client.textRenderer, meter.name, sWidth / 2, sHeight / 2, 0xcfffffff);
-					hit = true;
-				} catch (NoSuchObjectException | NullPointerException ignored) {
+				tessellator.draw();
+				if (ConfigHandler.Rendering.paused)
+					textRenderer.draw(matrices, new TranslatableText("rsmm.gui.paused", currentTick), 3, height, 0xcfffffff);
+				for (int i = start; i < end; i++) {
+					textRenderer.draw(matrices, ((Meter) manager.METERS.values().toArray()[i]).name, 4, 1 + meterHeight * (i - start), 0xcfffffff);
 				}
-			}
-			if(client.options.debugEnabled) {
-				DrawableHelper.drawCenteredText(matrices, client.textRenderer, new LiteralText(String.format("rendering gui took %fms", (System.nanoTime() - startRenderingTime) / 1000000d)), sWidth / 2, sHeight / 2 + (hit ? client.textRenderer.fontHeight : 0), 0xcfffffff);
+				if(ConfigHandler.Generic.showMeterName.getBooleanValue()){
+					profiler.swap("pointing at");//                                                                                                     +2
+					HitResult pointing = client.crosshairTarget;
+					if (pointing instanceof BlockHitResult) {
+						try {
+							Identifier id = manager.getMeterId(((BlockHitResult) pointing).getBlockPos(), client.world.getRegistryKey());
+							Meter meter = manager.METERS.get(id);
+							DrawableHelper.drawCenteredText(matrices, client.textRenderer, meter.name, sWidth / 2, sHeight / 2, 0xcfffffff);
+							hit = true;
+						} catch (NoSuchObjectException | NullPointerException ignored) {
+						}
+					}
+				}
+				if(ConfigHandler.Debug.DebugRendering.getBooleanValue()) {
+					DrawableHelper.drawCenteredText(matrices, client.textRenderer, new LiteralText(String.format("rendering gui took %fms", (System.nanoTime() - startRenderingTime) / 1000000d)), sWidth / 2, sHeight / 2 + (hit ? client.textRenderer.fontHeight : 0), 0xcfffffff);
+				}
 			}
 			profiler.pop();
 		}

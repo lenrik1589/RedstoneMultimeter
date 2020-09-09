@@ -11,6 +11,7 @@ import java.rmi.NoSuchObjectException;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import static org.lwjgl.glfw.GLFW.*;
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.hotkeys.*;
 import io.netty.buffer.Unpooled;
@@ -33,6 +34,21 @@ public class RsmmInputHandler implements IKeybindProvider {
 		return INSTANCE;
 	}
 
+	public static void setCallbacks () {
+		ConfigHandler.Generic.openConfig.getKeybind().setCallback(new Inputs.OpenConfigGui());
+		ConfigHandler.Generic.pauseKey.getKeybind().setCallback(new Inputs.PausePreview());
+		ConfigHandler.Generic.meterKey.getKeybind().setCallback(new Inputs.ToggleMeter());
+		ConfigHandler.Generic.previewKey.getKeybind().setCallback(new Inputs.TogglePreviewVisible());
+		ConfigHandler.Generic.upKey.getKeybind().setCallback(new Inputs.ScrollUp());
+		ConfigHandler.Generic.downKey.getKeybind().setCallback(new Inputs.ScrollDown());
+		ConfigHandler.Generic.leftKey.getKeybind().setCallback(new Inputs.ScrollLeft());
+		ConfigHandler.Generic.rightKey.getKeybind().setCallback(new Inputs.ScrollRight());
+		ConfigHandler.Debug.DebugRenderToggle.getKeybind().setCallback((action, key)-> {
+			ConfigHandler.Debug.DebugRendering.setBooleanValue(!ConfigHandler.Debug.DebugRendering.getBooleanValue());
+			return ConfigHandler.Debug.DebugRendering.getBooleanValue();
+		});
+	}
+
 	@Override
 	public void addKeysToMap (IKeybindManager manager) {
 		manager.addKeybindToMap(ConfigHandler.Generic.openConfig.getKeybind());
@@ -43,6 +59,7 @@ public class RsmmInputHandler implements IKeybindProvider {
 		manager.addKeybindToMap(ConfigHandler.Generic.rightKey.getKeybind());
 		manager.addKeybindToMap(ConfigHandler.Generic.upKey.getKeybind());
 		manager.addKeybindToMap(ConfigHandler.Generic.downKey.getKeybind());
+		manager.addKeybindToMap(ConfigHandler.Debug.DebugRenderToggle.getKeybind());
 	}
 
 	@Override
@@ -55,7 +72,8 @@ public class RsmmInputHandler implements IKeybindProvider {
 						ConfigHandler.Generic.rightKey,
 						ConfigHandler.Generic.leftKey,
 						ConfigHandler.Generic.upKey,
-						ConfigHandler.Generic.downKey
+						ConfigHandler.Generic.downKey,
+						ConfigHandler.Debug.DebugRenderToggle
 		);
 		manager.addHotkeysForCategory(Names.ModId, "rsmm.key.category", hotkeys);
 	}
@@ -102,8 +120,8 @@ public class RsmmInputHandler implements IKeybindProvider {
 			public boolean onKeyAction (KeyAction action, IKeybind key) {
 				if (ConfigHandler.Rendering.paused) {
 					ConfigHandler.Rendering.cursorPosition -= 1;
-					if (ConfigHandler.Rendering.cursorPosition < 1) {
-						ConfigHandler.Rendering.cursorPosition = 1;
+					if (ConfigHandler.Rendering.cursorPosition < 1 + 1) {
+						ConfigHandler.Rendering.cursorPosition = 1 + 1;
 						ConfigHandler.Rendering.scrollPosition = Math.max(ConfigHandler.Rendering.scrollPosition - 1, 0);
 					}
 				}
@@ -117,8 +135,8 @@ public class RsmmInputHandler implements IKeybindProvider {
 			public boolean onKeyAction (KeyAction action, IKeybind key) {
 				if (ConfigHandler.Rendering.paused) {
 					ConfigHandler.Rendering.cursorPosition += 1;
-					if (ConfigHandler.Rendering.cursorPosition > ConfigHandler.Generic.previewLength.getIntegerValue()) {
-						ConfigHandler.Rendering.cursorPosition = ConfigHandler.Generic.previewLength.getIntegerValue();
+					if (ConfigHandler.Rendering.cursorPosition > ConfigHandler.Generic.previewLength.getIntegerValue() - 1) {
+						ConfigHandler.Rendering.cursorPosition = ConfigHandler.Generic.previewLength.getIntegerValue() - 1;
 						ConfigHandler.Rendering.scrollPosition = Math.min(ConfigHandler.Rendering.scrollPosition + 1, ConfigHandler.Generic.maxHistory.getIntegerValue() - ConfigHandler.Generic.previewLength.getIntegerValue());
 					}
 				}
@@ -169,7 +187,7 @@ public class RsmmInputHandler implements IKeybindProvider {
 						).setColor(
 										Command.Color.getNextColor().color
 						).setMovable(
-										!key.getKeys().contains(77)
+										(glfwGetKey(MinecraftClient.getInstance().getWindow().getHandle(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(MinecraftClient.getInstance().getWindow().getHandle(), GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
 						);
 						meter.setMeterable((Meterable) (MinecraftClient.getInstance().world.getBlockState(meter.position).getBlock()));
 						MeterManager.get(MinecraftClient.getInstance()).addMeter(meter);
