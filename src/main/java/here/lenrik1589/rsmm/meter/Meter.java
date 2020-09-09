@@ -1,16 +1,12 @@
 package here.lenrik1589.rsmm.meter;
 
+import net.minecraft.text.BaseText;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class Meter {
 	public Text name;
@@ -19,20 +15,20 @@ public class Meter {
 	public BlockPos position;
 	private Meterable meterable;
 	public Integer color;
-	public List<MeterEvent> events = new ArrayList<>();
-	public Map<Long, Integer> tickToEventIndex = new HashMap<>();
-	public boolean movable = false;
+	public final EventStorage eventStorage;
+	public boolean movable = true;
 
-	public Meter(BlockPos pos, RegistryKey<World> dimension, Identifier id){
+	public Meter (BlockPos pos, RegistryKey<World> dimension, Identifier id) {
 		this(pos, dimension, id, new LiteralText(id.getPath()));
 	}
 
-	public Meter(BlockPos pos, RegistryKey<World> dimension, Identifier id, Text name){
+	public Meter (BlockPos pos, RegistryKey<World> dimension, Identifier id, Text name) {
 		this.dimension = dimension;
 		this.position = pos;
 		this.id = id;
 		this.name = name;
 		this.color = Command.Color.values()[Command.Color.values().length - 1].color;
+		this.eventStorage = new EventStorage(this);
 	}
 
 	public void setMeterable (Meterable meterable) {
@@ -50,6 +46,20 @@ public class Meter {
 
 	public Meter setName (Text name) {
 		this.name = name;
+		return this;
+	}
+
+	public void move(BlockPos pos){
+		if(movable){
+			position = pos;
+		}
+	}
+
+	public Meter setMovable (boolean movable) {
+		this.movable = movable;
+		if (name instanceof BaseText) {
+			((BaseText) name).setStyle(name.getStyle().withBold(movable));
+		}
 		return this;
 	}
 

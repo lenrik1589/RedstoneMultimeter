@@ -35,4 +35,13 @@ public class TickTime {
 		return new TickTime(buffer.readLong(), buffer.readEnumConstant(Phase.class)).setIndex(buffer.readShort());
 	}
 
+	@Override
+	public String toString () {
+		return "TickTime{" +
+						"tick=" + tick +
+						", phase=" + phase +
+						", index=" + index +
+						'}';
+	}
+
 }

@@ -1,22 +1,23 @@
 package here.lenrik1589.rsmm;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import here.lenrik1589.rsmm.config.ConfigHandler;
+import here.lenrik1589.rsmm.meter.*;
+import here.lenrik1589.rsmm.time.TickTime;
+import here.lenrik1589.rsmm.time.TickTimeGetter;
+
+import java.util.Random;
+
 import fi.dy.masa.malilib.config.ConfigManager;
 import fi.dy.masa.malilib.event.InitializationHandler;
 import fi.dy.masa.malilib.event.InputEventHandler;
 import fi.dy.masa.malilib.event.RenderEventHandler;
-import fi.dy.masa.malilib.gui.GuiBase;
-import fi.dy.masa.malilib.hotkeys.IHotkeyCallback;
-import fi.dy.masa.malilib.hotkeys.IKeybind;
-import fi.dy.masa.malilib.hotkeys.KeyAction;
 import fi.dy.masa.malilib.interfaces.IInitializationHandler;
-import here.lenrik1589.rsmm.config.ConfigHandler;
-import here.lenrik1589.rsmm.config.RsmmConfigGui;
-import here.lenrik1589.rsmm.meter.*;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.server.ServerTickCallback;
 import net.fabricmc.fabric.api.network.ClientSidePacketRegistry;
 import net.fabricmc.fabric.api.network.PacketContext;
 import net.fabricmc.fabric.api.network.ServerSidePacketRegistry;
@@ -24,22 +25,21 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
-import java.rmi.NoSuchObjectException;
-
 public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 
-	Packets.MeterS2CPacketHandler CMPH = new Packets.MeterS2CPacketHandler();
-	Packets.MeterC2SPacketHandler SMPH = new Packets.MeterC2SPacketHandler();
-	Packets.EventPacketHandler EPH = new Packets.EventPacketHandler();
+	private static final Packets.S2CMeterPacketHandler CMPH = new Packets.S2CMeterPacketHandler();
+	private static final Packets.C2SMeterPacketHandler SMPH = new Packets.C2SMeterPacketHandler();
+	private static final Packets.EventPacketHandler EPH = new Packets.EventPacketHandler();
+	private static final Identifier timeSyncId = new Identifier("", "");
 
 	@Override
 	public void onInitialize () {
@@ -54,9 +54,26 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 						(context, buffer) -> Names.LOGGER.info("packet {} in context {}", buffer.array(), context)
 		);
 		InitializationHandler.getInstance().registerInitializationHandler(new Initializer());
+		ServerTickEvents.START_SERVER_TICK.register((server) -> {
+			((TickTimeGetter) server).getTime().tick = server.getOverworld().getTime();
+			((TickTimeGetter) server).getTime().phase = TickTime.Phase.start;
+			((TickTimeGetter) server).getTime().index = 0;
+			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+			MeterEvent event = new MeterEvent(((TickTimeGetter) server).getTime(), timeSyncId, MeterEvent.Event.tickStart);
+			event.writeEvent(buffer);
+			server.getPlayerManager().sendToAll(new CustomPayloadS2CPacket(Names.EVENT_CHANNEL, buffer));
+		});
 	}
 
 	public void onInitializeClient () {
+		Random random = new Random();
+		if (random.nextDouble() < 0.01) {
+			String[] lulz = new String[]{
+							"Don't forget to feed your entry points.",
+							"This is not Wisconsin!"
+			};
+			Names.LOGGER.info(lulz[random.nextInt(lulz.length)]);
+		}
 		ClientSidePacketRegistry.INSTANCE.register(
 						Names.EVENT_CHANNEL,
 						EPH::onPacketReceived
@@ -75,140 +92,19 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 			ConfigManager.getInstance().registerConfigHandler(Names.ModId, new ConfigHandler());
 			InputEventHandler.getKeybindManager().registerKeybindProvider(RsmmInputHandler.getInstance());
 
-			ConfigHandler.Generic.openConfig.getKeybind().setCallback(new OpenConfigGui());
-			ConfigHandler.Generic.pauseKey.getKeybind().setCallback(new PausePreview());
-			ConfigHandler.Generic.meterKey.getKeybind().setCallback(new ToggleMeter());
-			ConfigHandler.Generic.previewKey.getKeybind().setCallback(new TogglePreviewVisible());
-			ConfigHandler.Generic.upKey.getKeybind().setCallback(new ScrollUp());
-			ConfigHandler.Generic.downKey.getKeybind().setCallback(new ScrollDown());
-			ConfigHandler.Generic.leftKey.getKeybind().setCallback(new ScrollLeft());
-			ConfigHandler.Generic.rightKey.getKeybind().setCallback(new ScrollRight());
+			ConfigHandler.Generic.openConfig.getKeybind().setCallback(new RsmmInputHandler.Inputs.OpenConfigGui());
+			ConfigHandler.Generic.pauseKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.PausePreview());
+			ConfigHandler.Generic.meterKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ToggleMeter());
+			ConfigHandler.Generic.previewKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.TogglePreviewVisible());
+			ConfigHandler.Generic.upKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollUp());
+			ConfigHandler.Generic.downKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollDown());
+			ConfigHandler.Generic.leftKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollLeft());
+			ConfigHandler.Generic.rightKey.getKeybind().setCallback(new RsmmInputHandler.Inputs.ScrollRight());
 			ConfigHandler.Generic.previewLength.setValueChangeCallback(config -> ConfigHandler.Generic.previewCursorPosition.setMaxValue(config.getIntegerValue()));
 			ConfigHandler.Generic.previewCursorPosition.setValueChangeCallback(config -> ConfigHandler.Rendering.cursorPosition = ConfigHandler.Rendering.paused ? ConfigHandler.Rendering.cursorPosition : config.getIntegerValue());
 
 			RenderEventHandler.getInstance().registerGameOverlayRenderer(Render.getInstance());
 			RenderEventHandler.getInstance().registerWorldLastRenderer(Render.getInstance());
-
-		}
-
-		private static class OpenConfigGui implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				GuiBase.openGui(new RsmmConfigGui());
-				return true;
-			}
-
-		}
-
-		private static class TogglePreviewVisible implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				ConfigHandler.Rendering.visible = !ConfigHandler.Rendering.visible;
-				return true;
-			}
-
-		}
-
-		private static class ScrollUp implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				ConfigHandler.Rendering.currentLine = Math.max(0, ConfigHandler.Rendering.currentLine - 1);
-				return true;
-			}
-
-		}
-
-		private static class ScrollDown implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				ConfigHandler.Rendering.currentLine = Math.max(0, Math.min(MeterManager.get(MinecraftClient.getInstance()).METERS.size() - ConfigHandler.Rendering.previewHeight.getIntegerValue(), ConfigHandler.Rendering.currentLine + 1));
-				return true;
-			}
-
-		}
-
-		private static class ScrollRight implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				if (ConfigHandler.Rendering.paused) {
-					ConfigHandler.Rendering.cursorPosition -= 1;
-					if (ConfigHandler.Rendering.cursorPosition < 1) {
-						ConfigHandler.Rendering.cursorPosition = 1;
-						ConfigHandler.Rendering.scrollPosition = Math.max(ConfigHandler.Rendering.scrollPosition - 1, 0);
-					}
-				}
-				return true;
-			}
-
-		}
-
-		private static class ScrollLeft implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				if (ConfigHandler.Rendering.paused) {
-					ConfigHandler.Rendering.cursorPosition += 1;
-					if (ConfigHandler.Rendering.cursorPosition > ConfigHandler.Generic.previewLength.getIntegerValue()) {
-						ConfigHandler.Rendering.cursorPosition = ConfigHandler.Generic.previewLength.getIntegerValue();
-						ConfigHandler.Rendering.scrollPosition = Math.min(ConfigHandler.Rendering.scrollPosition + 1, ConfigHandler.Generic.maxHistory.getIntegerValue() - ConfigHandler.Generic.previewLength.getIntegerValue());
-					}
-				}
-				return true;
-			}
-
-		}
-
-		private static class PausePreview implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				ConfigHandler.Rendering.paused = !ConfigHandler.Rendering.paused;
-				ConfigHandler.Rendering.cursorPosition = ConfigHandler.Generic.previewCursorPosition.getIntegerValue();
-				ConfigHandler.Rendering.scrollPosition = 0;
-				ConfigHandler.Rendering.pauseTick = MinecraftClient.getInstance().world.getTime();
-				return true;
-			}
-
-		}
-
-		private static class ToggleMeter implements IHotkeyCallback {
-			@Override
-			public boolean onKeyAction (KeyAction action, IKeybind key) {
-				//				MinecraftClient.getInstance().mouse.unlockCursor();
-				HitResult pointing = MinecraftClient.getInstance().crosshairTarget;
-				if (!(pointing == null) && pointing.getType() == HitResult.Type.BLOCK) {
-					BlockHitResult blockHit = (BlockHitResult) pointing;
-					PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
-					try {
-						BlockPos pos = blockHit.getBlockPos();
-						Identifier id = MeterManager.get(MinecraftClient.getInstance()).getMeterId(pos, MinecraftClient.getInstance().player.world.getRegistryKey());
-						MeterManager.get(MinecraftClient.getInstance()).METERS.remove(id);
-						buffer.writeEnumConstant(MeterManager.Action.remove);
-						buffer.writeIdentifier(id);
-					} catch (NullPointerException e) {
-						Names.LOGGER.info("ignoring {} in RsmmInitializer$ToggleMeter.onKeyAction", e.getMessage());
-					} catch (NoSuchObjectException e) {
-						try {
-							Meter meter = new Meter(
-											blockHit.getBlockPos(),
-											MinecraftClient.getInstance().world.getRegistryKey(),
-											MeterManager.get(MinecraftClient.getInstance()).getNextId()
-							).setColor(
-											Command.Color.getNextColor().color
-							);
-							meter.setMeterable((Meterable) (MinecraftClient.getInstance().world.getBlockState(meter.position).getBlock()));
-							MeterManager.get(MinecraftClient.getInstance()).addMeter(meter);
-							buffer.writeEnumConstant(MeterManager.Action.add);
-							buffer.writeIdentifier(meter.id);
-							buffer.writeBlockPos(meter.position);
-							buffer.writeIdentifier(meter.dimension.getValue());
-							buffer.writeInt(meter.color);
-							buffer.writeText(meter.name);
-						} catch (CommandSyntaxException ignored) {
-						}
-					}
-					ClientSidePacketRegistry.INSTANCE.sendToServer(Names.METER_CHANNEL, buffer);
-				}
-				return true;
-			}
 
 		}
 
@@ -228,23 +124,27 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 
 		}
 
-		public static class MeterC2SPacketHandler extends MeterPacketHandler {
+		public static class C2SMeterPacketHandler extends MeterPacketHandler {
 			public void onPacketReceived (PacketContext context, PacketByteBuf buf) {
 				MeterManager.Action action = buf.readEnumConstant(MeterManager.Action.class);
 				MeterManager manager = MeterManager.get(context.getPlayer().getServer());
+				Meter meter;
 				switch (action) {
 					case add -> {
-						var meter = readMeter(buf);
-						manager.METERS.put(meter.id, meter);
+						meter = readMeter(buf);
+						manager.addMeter(meter);
 					}
-					case remove -> manager.METERS.remove(buf.readIdentifier());
+					case remove -> {
+						meter = manager.METERS.get(buf.readIdentifier());
+						manager.removeMeter(meter);
+					}
 					default -> throw new IllegalStateException("Unexpected value: " + action);
 				}
 			}
 
 		}
 
-		public static class MeterS2CPacketHandler extends MeterPacketHandler {
+		public static class S2CMeterPacketHandler extends MeterPacketHandler {
 			private static final Meter clearMeter = new Meter(
 							new BlockPos(-2147483648, -2147483648, -2147483648),
 							null,
@@ -252,6 +152,9 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 			);
 
 			public void onPacketReceived (PacketContext context, PacketByteBuf buffer) {
+				if (MinecraftClient.getInstance().world == null) {
+					return;
+				}
 				//			Names.LOGGER.info(buffer.array());
 				MeterManager.Action action = buffer.readEnumConstant(MeterManager.Action.class);
 				final Meter meter;
@@ -260,18 +163,18 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 						meter = readMeter(buffer);
 						meter.setMeterable((Meterable) (MinecraftClient.getInstance().world.getBlockState(meter.position).getBlock()));
 					}
-					case name -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier()).setName(buffer.readText());
-					case color -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier()).setColor(buffer.readInt());
-					case remove -> meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(buffer.readIdentifier());
+					case name -> meter = MeterManager.get(MinecraftClient.getInstance()).get(buffer.readIdentifier()).setName(buffer.readText());
+					case color -> meter = MeterManager.get(MinecraftClient.getInstance()).get(buffer.readIdentifier()).setColor(buffer.readInt());
+					case remove -> meter = MeterManager.get(MinecraftClient.getInstance()).get(buffer.readIdentifier());
 					case clear -> meter = clearMeter;
 					default -> throw new IllegalStateException("Unexpected value: " + action);
 				}
 				context.getTaskQueue().execute(
 								() -> {
 									switch (action) {
-										case add -> MeterManager.get(MinecraftClient.getInstance()).METERS.put(meter.id, meter);
-										case remove -> MeterManager.get(MinecraftClient.getInstance()).METERS.remove(meter.id);
-										case clear -> MeterManager.get(MinecraftClient.getInstance()).METERS.clear();
+										case add -> MeterManager.get(MinecraftClient.getInstance()).addMeter(meter);
+										case remove -> MeterManager.get(MinecraftClient.getInstance()).removeMeter(meter);
+										case clear -> MeterManager.get(MinecraftClient.getInstance()).clear();
 									}
 									Names.LOGGER.info("Received packet for {}, with action {}", meter.id, action);
 								}
@@ -289,15 +192,28 @@ public class RsmmInitializer implements ModInitializer, ClientModInitializer {
 				} else {
 					nevPos = null;
 				}
+				Meter meter = MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId);
 				//				Names.LOGGER.info("meter event \"{}\" for id {} on tick {} №{} in phase {};", event.event, event.meterId, event.time.tick, event.time.index, event.time.phase);
 				context.getTaskQueue().execute(
 								() -> {
-									MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).events.add(event);
-									if (event.event == MeterEvent.Event.moved) {
-										MeterManager.get(MinecraftClient.getInstance()).METERS.get(event.meterId).position = nevPos;
+									if (meter == null) {
+										for (Meter m : MeterManager.get(MinecraftClient.getInstance()).METERS.values()) {
+											m.eventStorage.addEvent(event);
+										}
+
+									} else {
+										meter.eventStorage.addEvent(event);
+										if (event.event == MeterEvent.Event.moved) {
+											meter.position = nevPos;
+										}
+										Render.eventNumbers.put(
+														event.time.tick,
+														Render.eventNumbers.containsKey(event.time.tick) ? Render.eventNumbers.get(event.time.tick) + 1 : 1
+										);
 									}
 								}
 				);
+
 			}
 
 		}

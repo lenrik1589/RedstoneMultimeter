@@ -6,6 +6,12 @@ import here.lenrik1589.rsmm.meter.MeterManager;
 import here.lenrik1589.rsmm.meter.Meterable;
 import here.lenrik1589.rsmm.time.TickTime;
 import here.lenrik1589.rsmm.time.TickTimeGetter;
+
+import java.rmi.NoSuchObjectException;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
+
 import io.netty.buffer.Unpooled;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -31,21 +37,17 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.rmi.NoSuchObjectException;
-import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.function.BooleanSupplier;
-
 @Mixin(ServerWorld.class)
 public abstract class ServerWorldMixin {
 	@Shadow
 	@Final
 	private MinecraftServer server;
+	private static final Identifier timeSyncId = new Identifier("", "");
 
 	@Inject(method = "<init>", at = @At("RETURN"))
 	public void init (MinecraftServer server, Executor workerExecutor, LevelStorage.Session session, ServerWorldProperties properties, RegistryKey<net.minecraft.world.World> registryKey, DimensionType dimensionType, WorldGenerationProgressListener worldGenerationProgressListener, ChunkGenerator chunkGenerator, boolean bl, long l, List<Spawner> list, boolean bl2, CallbackInfo info) {
-		((TickTimeGetter)server).getTime().tick = properties.getTime();
-		((TickTimeGetter)server).getTime().index = 0;
+		((TickTimeGetter) server).getTime().tick = properties.getTime();
+		((TickTimeGetter) server).getTime().index = 0;
 	}
 
 	@Inject(
@@ -55,8 +57,12 @@ public abstract class ServerWorldMixin {
 					)
 	)
 	private void tickStart (BooleanSupplier shouldKeepTicking, CallbackInfo info) {
-		((TickTimeGetter)server).getTime().tick = ((ServerWorld)(Object)this).getTime();
-		((TickTimeGetter)server).getTime().index = 0;
+//		if (!((ServerWorld) (Object) this).isClient) {
+//			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
+//			MeterEvent event = new MeterEvent(((TickTimeGetter) server).getTime(), timeSyncId, MeterEvent.Event.tickStart);
+//			event.writeEvent(buffer);
+//			server.getPlayerManager().sendToAll(new CustomPayloadS2CPacket(Names.EVENT_CHANNEL, buffer));
+//		}
 	}
 
 	@Inject(
@@ -68,7 +74,7 @@ public abstract class ServerWorldMixin {
 					)
 	)
 	private void tickPending (BooleanSupplier shouldKeepTicking, CallbackInfo info) {
-		((TickTimeGetter)server).getTime().phase = TickTime.Phase.tickPending;
+		((TickTimeGetter) server).getTime().phase = TickTime.Phase.tickPending;
 	}
 
 	@Inject(
@@ -80,7 +86,7 @@ public abstract class ServerWorldMixin {
 					)
 	)
 	private void blockEvents (BooleanSupplier shouldKeepTicking, CallbackInfo info) {
-		((TickTimeGetter)server).getTime().phase = TickTime.Phase.blockEvents;
+		((TickTimeGetter) server).getTime().phase = TickTime.Phase.blockEvents;
 	}
 
 	@Inject(
@@ -92,7 +98,7 @@ public abstract class ServerWorldMixin {
 					)
 	)
 	private void entities (BooleanSupplier shouldKeepTicking, CallbackInfo info) {
-		((TickTimeGetter)server).getTime().phase = TickTime.Phase.entities;
+		((TickTimeGetter) server).getTime().phase = TickTime.Phase.entities;
 	}
 
 	@Inject(
@@ -103,11 +109,11 @@ public abstract class ServerWorldMixin {
 					)
 	)
 	private void blockEntities (BooleanSupplier shouldKeepTicking, CallbackInfo info) {
-		((TickTimeGetter)server).getTime().phase = TickTime.Phase.blockEntities;
+		((TickTimeGetter) server).getTime().phase = TickTime.Phase.blockEntities;
 	}
 
 	BlockPos lastPos;
-	boolean  lastPower;
+	boolean lastPower;
 
 	@Inject(
 					method = "tickBlock",
@@ -118,10 +124,10 @@ public abstract class ServerWorldMixin {
 					),
 					locals = LocalCapture.CAPTURE_FAILHARD
 	)
-	private void beforeTickBlock (ScheduledTick<Block> tick, CallbackInfo info, BlockState state){
+	private void beforeTickBlock (ScheduledTick<Block> tick, CallbackInfo info, BlockState state) {
 		BlockPos pos = tick.pos;
 		lastPos = pos;
-		lastPower = ((Meterable)tick.getObject()).isPowered(state, (ServerWorld)(Object)this, pos);
+		lastPower = ((Meterable) tick.getObject()).isPowered(state, (ServerWorld) (Object) this, pos);
 	}
 
 	@Inject(
@@ -133,21 +139,21 @@ public abstract class ServerWorldMixin {
 					),
 					locals = LocalCapture.CAPTURE_FAILHARD
 	)
-	private void afterTickBlock (ScheduledTick<Block> tick, CallbackInfo info, BlockState state){
-		boolean newPower = ((Meterable)tick.getObject()).isPowered(((ServerWorld)(Object)this).getBlockState(lastPos), (ServerWorld)(Object)this, lastPos);
-		if (lastPower != newPower){
+	private void afterTickBlock (ScheduledTick<Block> tick, CallbackInfo info, BlockState state) {
+		boolean newPower = ((Meterable) tick.getObject()).isPowered(((ServerWorld) (Object) this).getBlockState(lastPos), (ServerWorld) (Object) this, lastPos);
+		if (lastPower != newPower) {
 			PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
 			try {
-				Identifier meterId = MeterManager.get(server).getMeterId(lastPos, ((ServerWorld)(Object)this).getRegistryKey());
-				MeterEvent event = new MeterEvent(((TickTimeGetter)server).getTime(), meterId, lastPower? MeterEvent.Event.unpowered: MeterEvent.Event.powered);
+				Identifier meterId = MeterManager.get(server).getMeterId(lastPos, ((ServerWorld) (Object) this).getRegistryKey());
+				MeterEvent event = new MeterEvent(((TickTimeGetter) server).getTime(), meterId, lastPower ? MeterEvent.Event.unpowered : MeterEvent.Event.powered);
 				event.writeEvent(buffer);
 				CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(Names.EVENT_CHANNEL, buffer);
 				server.getPlayerManager().sendToAll(packet);
-				++((TickTimeGetter)server).getTime().index;
-			} catch (NoSuchObjectException ignored){
+				++((TickTimeGetter) server).getTime().index;
+			} catch (NoSuchObjectException ignored) {
 			}
 		}
-//		Names.LOGGER.info("scheduled tick {}->{} {} {}", lastPower, newPower, lastPos, tick.getObject().getName().getString());
+		//		Names.LOGGER.info("scheduled tick {}->{} {} {}", lastPower, newPower, lastPos, tick.getObject().getName().getString());
 	}
 
 }

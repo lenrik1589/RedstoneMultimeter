@@ -1,6 +1,7 @@
 package here.lenrik1589.rsmm.meter;
 
 import here.lenrik1589.rsmm.time.TickTime;
+
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 
@@ -10,15 +11,20 @@ public class MeterEvent {
 	public Event event;
 
 	public MeterEvent (TickTime time, Identifier id, Event event) {
-		meterId    = id;
+		meterId = id;
 		this.event = event;
-		this.time  = time;
+		this.time = time;
 	}
 
 	public enum Event {
 		powered,
 		unpowered,
-		moved
+		moved,
+		tickStart;
+
+		public boolean isPower () {
+			return this == powered || this == unpowered;
+		}
 	}
 
 	public void writeEvent (PacketByteBuf buffer) {
@@ -29,6 +35,15 @@ public class MeterEvent {
 
 	public static MeterEvent readEvent (PacketByteBuf buffer) {
 		return new MeterEvent(TickTime.readTime(buffer), buffer.readIdentifier(), buffer.readEnumConstant(Event.class));
+	}
+
+	@Override
+	public String toString () {
+		return "MeterEvent{" +
+						"time=" + time +
+						", meterId=" + meterId +
+						", event=" + event +
+						'}';
 	}
 
 }

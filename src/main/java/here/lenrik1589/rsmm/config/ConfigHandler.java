@@ -10,6 +10,9 @@ import fi.dy.masa.malilib.config.options.*;
 import fi.dy.masa.malilib.util.FileUtils;
 import fi.dy.masa.malilib.util.JsonUtils;
 import here.lenrik1589.rsmm.Names;
+import here.lenrik1589.rsmm.meter.MeterManager;
+import here.lenrik1589.rsmm.meter.Render;
+import net.minecraft.client.MinecraftClient;
 
 import java.io.File;
 

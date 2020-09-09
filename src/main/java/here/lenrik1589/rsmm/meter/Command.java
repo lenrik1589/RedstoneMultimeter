@@ -290,7 +290,7 @@ public class Command {
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
 		buffer.writeEnumConstant(MeterManager.Action.remove);
 		buffer.writeIdentifier(id);
-		MeterManager.get(source.getMinecraftServer()).METERS.remove(id);
+		MeterManager.get(source.getMinecraftServer()).removeMeter(MeterManager.get(source.getMinecraftServer()).METERS.get(id));
 		source.getMinecraftServer().getPlayerManager().getPlayerList().forEach(
 						player -> ServerSidePacketRegistry.INSTANCE.sendToPlayer(player, Names.METER_CHANNEL, buffer)
 		);
@@ -301,7 +301,7 @@ public class Command {
 		ServerCommandSource source = context.getSource();
 		PacketByteBuf buffer = new PacketByteBuf(Unpooled.buffer());
 		buffer.writeEnumConstant(MeterManager.Action.clear);
-		MeterManager.get(source.getMinecraftServer()).METERS.clear();
+		MeterManager.get(source.getMinecraftServer()).clear();
 		CustomPayloadS2CPacket packet = new CustomPayloadS2CPacket(Names.METER_CHANNEL, buffer);
 		source.getMinecraftServer().getPlayerManager().sendToAll(packet);
 		return 0;

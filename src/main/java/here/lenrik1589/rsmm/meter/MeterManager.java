@@ -1,10 +1,11 @@
 package here.lenrik1589.rsmm.meter;
 
+import java.rmi.NoSuchObjectException;
+import java.util.LinkedHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import here.lenrik1589.rsmm.config.ConfigHandler;
-import it.unimi.dsi.fastutil.booleans.BooleanList;
-import it.unimi.dsi.fastutil.booleans.BooleanLists;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
@@ -14,31 +15,21 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 
-import java.rmi.NoSuchObjectException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class MeterManager {
+	public final LinkedHashMap<DimPos, Identifier> positionIdMap = new LinkedHashMap<>();
 	public final LinkedHashMap<Identifier, Meter> METERS = new LinkedHashMap<>();
 
-	public int cursorPosition = ConfigHandler.Generic.previewCursorPosition.getIntegerValue();
-	public LinkedHashMap<Identifier, BooleanList> cachedPreviewHistory = new LinkedHashMap<>();
-	public LinkedHashMap<Identifier, BooleanList> meterStateHistory = new LinkedHashMap<>();
-
 	public Identifier getMeterId (BlockPos pos, RegistryKey<World> dimension) throws NoSuchObjectException {
-		for (Map.Entry<Identifier, Meter> entry : METERS.entrySet()) {
-			Meter m = entry.getValue();
-			if (m.dimension == dimension && m.position.equals(pos)) {
-				return m.id;
-			}
+		Identifier id = positionIdMap.get(new DimPos(pos, dimension));
+		if (id == null) {
+			throw new NoSuchObjectException("maybe add it first?");
+		} else {
+			return id;
 		}
-		throw new NoSuchObjectException("maybe add it first?");
 	}
 
 	public int listMeters (CommandContext<ServerCommandSource> context) {
-		if(METERS.isEmpty()){
+		if (METERS.isEmpty()) {
 			context.getSource().sendFeedback(new LiteralText("Meter list is empty."), false);
 			return 1;
 		}
@@ -47,10 +38,6 @@ public class MeterManager {
 			context.getSource().sendFeedback(new LiteralText(m.id.toString() + " : " + m.name.asString()), false);
 		}
 		return 0;
-	}
-
-	public Meter getMeter (BlockPos pos, RegistryKey<World> dimesion) throws NoSuchObjectException {
-		return METERS.get(getMeterId(pos, dimesion));
 	}
 
 	public enum Action {
@@ -83,37 +70,41 @@ public class MeterManager {
 		}
 	}
 
-	public boolean addMeter (Meter meter) throws CommandSyntaxException {
+	public boolean addMeter (Meter meter) {
 		if (METERS.containsKey(meter.id)) {
 			return false;
 		}
 		METERS.put(meter.id, meter);
-		meterStateHistory.put(meter.id, BooleanLists.EMPTY_LIST);
+		positionIdMap.put(new DimPos(meter.position, meter.dimension), meter.id);
 
 		return true;
 	}
 
-	public String listMeters () {
-		StringBuilder list = new StringBuilder();
-		for (Object id : METERS.keySet().stream().sorted().toArray()) {
-			Meter m = METERS.get(id);
-			list.append(m.id.getPath()).append(" : ").append(m.name.asString()).append('\n');
+	public boolean removeMeter (Meter meter) {
+		if (!METERS.containsKey(meter.id)) {
+			return false;
 		}
-		return list.toString().replaceAll("\\n$", "");
+		METERS.remove(meter.id, meter);
+		positionIdMap.remove(new DimPos(meter.position, meter.dimension), meter.id);
+
+		return true;
 	}
 
-	public static int clear (CommandContext<ServerCommandSource> context) {
-		((MeterI) context.getSource().getMinecraftServer()).getMeterManager().clear();
-		return 0;
-	}
-
-	public void clear () {
+	public boolean clear () {
+		if (METERS.isEmpty() || positionIdMap.isEmpty()) {
+			return false;
+		}
 		METERS.clear();
+		positionIdMap.clear();
+		return true;
 	}
 
-	public static MeterManager get (Object server) {
-		MinecraftServer actualServer = (MinecraftServer) server;
-		return ((MeterI) actualServer).getMeterManager();
+	public Meter get(Identifier id){
+		return METERS.get(id);
+	}
+
+	public static MeterManager get (MinecraftServer server) {
+		return ((MeterI) server).getMeterManager();
 	}
 
 	public static MeterManager get (MinecraftClient client) {

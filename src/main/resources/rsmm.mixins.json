@@ -11,7 +11,6 @@
 		"block.DispenserBlockMixin",
 		"block.LeverBlockMixin",
 		"block.ObserverBlockMixin",
-		"block.PistonBlockEntityMixin",
 		"block.PistonBlockMixin",
 		"block.PoweredRailBlockMixin",
 		"block.RedstoneTorchBlockMixin",
