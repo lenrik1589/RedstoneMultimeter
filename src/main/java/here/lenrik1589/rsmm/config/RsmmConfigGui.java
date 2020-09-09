@@ -60,7 +60,9 @@ public class RsmmConfigGui extends GuiConfigsBase {
 			configs = ConfigHandler.Generic.OPTIONS;
 		} else if (tab == ConfigGuiTab.RENDERING) {
 			configs = ConfigHandler.Rendering.OPTIONS;
-		} else {
+		} else if (tab == ConfigGuiTab.DEBUG){
+			configs = ConfigHandler.Debug.OPTIONS;
+		}else{
 			return Collections.emptyList();
 		}
 
@@ -89,7 +91,8 @@ public class RsmmConfigGui extends GuiConfigsBase {
 
 	public enum ConfigGuiTab {
 		GENERIC("rsmm.gui.generic"),
-		RENDERING("rsmm.gui.rendering");
+		RENDERING("rsmm.gui.rendering"),
+		DEBUG("rsmm.gui.debug");
 
 		private final String translationKey;
 

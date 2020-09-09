@@ -1,20 +1,20 @@
 package here.lenrik1589.rsmm.config;
 
+import here.lenrik1589.rsmm.Names;
+
+import java.io.File;
+
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import fi.dy.masa.malilib.config.ConfigUtils;
 import fi.dy.masa.malilib.config.IConfigHandler;
 import fi.dy.masa.malilib.config.IConfigValue;
-import fi.dy.masa.malilib.config.options.*;
+import fi.dy.masa.malilib.config.options.ConfigBoolean;
+import fi.dy.masa.malilib.config.options.ConfigColor;
+import fi.dy.masa.malilib.config.options.ConfigHotkey;
 import fi.dy.masa.malilib.util.FileUtils;
 import fi.dy.masa.malilib.util.JsonUtils;
-import here.lenrik1589.rsmm.Names;
-import here.lenrik1589.rsmm.meter.MeterManager;
-import here.lenrik1589.rsmm.meter.Render;
-import net.minecraft.client.MinecraftClient;
-
-import java.io.File;
 
 public class ConfigHandler implements IConfigHandler {
 	private static final String CONFIG_FILE_NAME = Names.ModId + ".json";
@@ -49,6 +49,7 @@ public class ConfigHandler implements IConfigHandler {
 		public static final ConfigHotkey  upKey                  = new ConfigHotkey( "Scroll Up Key",           "UP",                                             "Scroll preview up.");
 		public static final ConfigHotkey  downKey                = new ConfigHotkey( "Scroll Down Key",         "DOWN",                                           "Scroll preview down.");
 		public static final ConfigHotkey  openConfig             = new ConfigHotkey( "Open Config GUI",         "N,C",                                            "Open the in-game malilib config GUI");
+		public static final ConfigBoolean showMeterName          = new ConfigBoolean("Show Meter Name",         true,                                                    "Shovs meter name if block pointing at has any");
 		public static final IntegerConfig maxHistory             = new IntegerConfig("Max History Length",      100000, 100, 1000000,                 "Maximum amount of ticks that will be stored in preview.\n72000 ticks are equal to one hour.");
 		public static final IntegerConfig previewLength          = new IntegerConfig("Preview Length",          60,     1,   100,     false,"How many ticks to show in preview.");
 		public static final IntegerConfig previewCursorPosition  = new IntegerConfig("Preview Cursor Position", 8,      1,   20,      false,"Default cursor position in preview mode.");
@@ -63,7 +64,17 @@ public class ConfigHandler implements IConfigHandler {
 						openConfig,
 						maxHistory,
 						previewLength,
-						previewCursorPosition
+						previewCursorPosition,
+						showMeterName
+		);
+	}
+
+	public static class Debug{
+		public static final ConfigHotkey          DebugRenderToggle = new ConfigHotkey("Toggle Debug Rendering", "", "Toggle additional rendering.");
+		public static final ConfigBoolean DebugRendering = new ConfigBoolean("Debug Rendering", false, "", "Additional rendering.");
+		public static final ImmutableList<IConfigValue> OPTIONS  = ImmutableList.of(
+						DebugRendering,
+						DebugRenderToggle
 		);
 	}
 
@@ -77,6 +88,7 @@ public class ConfigHandler implements IConfigHandler {
 				JsonObject root = element.getAsJsonObject();
 				ConfigUtils.readConfigBase(root, "Generic", Generic.OPTIONS);
 				ConfigUtils.readConfigBase(root, "Rendering", Rendering.OPTIONS);
+				ConfigUtils.readConfigBase(root, "Debug", Debug.OPTIONS);
 			}
 		}
 		if(!Rendering.paused)
@@ -91,6 +103,7 @@ public class ConfigHandler implements IConfigHandler {
 
 			ConfigUtils.writeConfigBase(root, "Generic", Generic.OPTIONS);
 			ConfigUtils.writeConfigBase(root, "Rendering", Rendering.OPTIONS);
+			ConfigUtils.writeConfigBase(root, "Debug", Debug.OPTIONS);
 
 			JsonUtils.writeJsonToFile(root, new File(dir, CONFIG_FILE_NAME));
 		}
